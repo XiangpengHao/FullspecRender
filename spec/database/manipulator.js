@@ -1,4 +1,4 @@
-const spectrum = require("./spectrum.json");
+const spectrum = require("./reflectance.json");
 const fs = require("fs");
 const renamed = spectrum.map(item => {
   return {
@@ -12,6 +12,6 @@ const renamed = spectrum.map(item => {
     xyz: item.xyz_d65
   };
 });
-fs.writeFile("./spectrum.json", JSON.stringify(renamed), err => {
+fs.writeFile("./reflectance.json", JSON.stringify(renamed), err => {
   console.log("saved!");
 });

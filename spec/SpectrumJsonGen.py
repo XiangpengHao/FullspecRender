@@ -43,9 +43,8 @@ def color(match: str, start: int, end: int, resolution: int, s_type: SpecType):
 
 
 def rename_column():
-  json_dict = json.load(open('spec/database/spectrum.json'))
-  
-  
+  json_dict = json.load(open('spec/database/reflectance.json'))
+
   if __name__ == '__main__':
     # for i in range(1, 121):
     #     main(f'natural/R{i}.txt', 400, 700, 5, SpecType.REFLECTANCE_NATURAL)

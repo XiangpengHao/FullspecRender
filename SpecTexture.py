@@ -77,7 +77,7 @@ class SpecTexture:
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         cur_rbg = self.rgb_img[i, j] / 255
-        closet_spec, scale = RGBMatcher.find_nearest(cur_rbg)
+        closet_spec, scale = RGBMatcher.find_nearest_reflectance(cur_rbg)
         tmp = np.asarray(closet_spec.data) * scale * CONSTANT.SPECTRUM_SCALE * 255
         spec[i, j] = np.rint(tmp).astype(np.uint8)
       print(f'now line: {i}')

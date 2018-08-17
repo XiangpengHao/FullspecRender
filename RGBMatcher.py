@@ -2,7 +2,6 @@ import json
 from Spectrum import Spectrum
 from typing import List, Union, Tuple
 import numpy as np
-from utils import spec_to_rgb
 import utils
 from scipy import spatial
 import CONSTANT
@@ -14,60 +13,48 @@ DISTANCE_HOLD = 0.0005
 def compute_d65_cache_xyz():
   rv = []
   d65 = Spectrum('spec/d65.json')
-  for spec in all_spec:
+  for spec in all_reflectance:
     under_light = np.multiply(d65.data, spec['data'])
     xyz: Tuple[float, float, float] = utils.spec_to_xyz(under_light)
     spec['xyz_d65'] = xyz
     rv.append(spec)
     print(spec)
-  json.dump(all_spec, open('spec/database/spectrum.json', 'w'))
+  json.dump(all_reflectance, open('spec/database/reflectance.json', 'w'))
 
 
-def compute_d65_cache_rgb():
-  rv = []
-  for spec in all_spec:
-    r, g, b = utils.under_d65(Spectrum(spec))
-    spec['rgb_d65'] = [r, g, b]
-    rv.append(spec)
-    print(spec)
-  json.dump(all_spec, open('spec/database/all.json', 'w'))
+all_reflectance = json.load(open('spec/database/reflectance.json'))
+all_reflectance_xy = [np.asarray(x['xyz']) / sum(x['xyz']) for x in all_reflectance]
+all_reflectance_xy_kdd = spatial.KDTree(all_reflectance_xy)
+
+all_illuminant = json.load(open('spec/database/illuminant.json'))
+all_illuminant_xy = [np.asarray(x['xyz']) / sum(x['xyz']) for x in all_illuminant]
+all_illuminant_xy_kdd = spatial.KDTree(all_illuminant_xy)
 
 
-all_spec = json.load(open('spec/database/spectrum.json'))
-all_spec_xy = [np.asarray(x['xyz_d65']) / sum(x['xyz_d65']) for x in all_spec]
-all_spec_xy_kdd = spatial.KDTree(all_spec_xy)
-
-
-def find_nearest(rgb: np.ndarray) -> (Spectrum, np.ndarray):
+def find_nearest_reflectance(rgb: np.ndarray) -> (Spectrum, np.ndarray):
   xyz = utils.srgb_to_xyz(rgb)
   if sum(xyz) == 0:
-    return Spectrum(all_spec[0]), 0
+    return Spectrum(all_reflectance[0]), 0
   xyz_norm = xyz / sum(xyz)
-  distance, index = all_spec_xy_kdd.query(xyz_norm)
+  distance, index = all_reflectance_xy_kdd.query(xyz_norm)
   
-  return Spectrum(all_spec[index]), xyz[1] / all_spec[index]['xyz_d65'][1]
+  return Spectrum(all_reflectance[index]), xyz[1] / all_reflectance[index]['xyz'][1]
 
 
-def find_nearest_deprecated(rgb: np.ndarray) -> (Spectrum, np.ndarray):
+def find_nearest_illuminant(rgb: np.ndarray) -> (Spectrum, np.ndarray):
   xyz = utils.srgb_to_xyz(rgb)
+  if sum(xyz) == 0:
+    return Spectrum(all_illuminant[0]), 0
   xyz_norm = xyz / sum(xyz)
-  min_distance = 100
-  min_index = 0
-  for i, spec in enumerate(all_spec):
-    spec_xyz = spec['xyz_d65']
-    sum_xyz = sum(spec_xyz)
-    distance = utils.distance_v2((xyz_norm[0], xyz_norm[1]), (spec_xyz[0] / sum_xyz, spec_xyz[1] / sum_xyz))
-    if distance < min_distance:
-      min_distance = distance
-      min_index = i
-  return Spectrum(all_spec[min_index]), xyz[2] / all_spec[min_index]['xyz_d65'][2]
+  distance, index = all_illuminant_xy_kdd.query(xyz_norm)
+  return Spectrum(all_illuminant[index]), xyz[1] / all_illuminant[index]['xyz'][1]
 
 
 def find_closet_using_rgb(rgb: Tuple[float, float, float]):
   max_cosine = 0
   max_index = 0
   rgb_norm = np.linalg.norm(rgb)
-  for i, spec in enumerate(all_spec):
+  for i, spec in enumerate(all_reflectance):
     # if min(spec['rgb_d65']) < 0:
     #   continue
     dot_value = np.dot(rgb, spec['rgb_d65'])
@@ -79,14 +66,14 @@ def find_closet_using_rgb(rgb: Tuple[float, float, float]):
       max_index = i
       # print(f'====== break with {t}, {i}')
       break
-  return all_spec[max_index]
+  return all_reflectance[max_index]
 
 
 def parse_model_config(path: str):
   config = json.load(open(path))
   result = {}
   for k, v in config.items():
-    closet_spec, scale = find_nearest(np.asarray(v))
+    closet_spec, scale = find_nearest_reflectance(np.asarray(v))
     closet_spec.data = (np.asarray(closet_spec.data) * scale * CONSTANT.SPECTRUM_SCALE).tolist()
     result[k] = {
       'rgb': v,
@@ -98,7 +85,7 @@ def parse_model_config(path: str):
 def test():
   rgb = (0.3, 0.6, 0.7)
   # result, s = find_nearest(np.asarray(rgb))
-  r_k, s_k = find_nearest(np.asarray(rgb))
+  r_k, s_k = find_nearest_reflectance(np.asarray(rgb))
   xyz_d65 = np.asarray(r_k.xyz_d65) * s_k
   rgb_new = utils.xyz_to_srgb(xyz_d65)
   print(rgb_new)
@@ -109,5 +96,5 @@ if __name__ == '__main__':
   # parse_model_config('model/donut.json')
   # compute_d65_cache_xyz()
   # test()
-  near = find_nearest(np.asarray([0.65, 0.4, 0.35]))[0]
-  print(near.json)
+  near = find_nearest_illuminant(np.asarray([0.65, 0.4, 0.35]))
+  print(near[0].json, near[1])

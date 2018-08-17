@@ -19,8 +19,8 @@ class Spectrum:
       self.start_nm: int = data.get('start_nm')
       self.end_nm: int = data.get('end_nm')
       self._resolution: int = data.get('resolution')
-      self.rgb_d65: List[float] = data.get('rgb_d65')
-      self.xyz_d65: List[float] = data.get('xyz_d65')
+      self.rgb: List[float] = data.get('rgb')
+      self.xyz: List[float] = data.get('xyz')
       self.type_max = data.get('type_max')
       self.data: List[float] = [x / data.get('type_max') for x in data.get('data')]
     elif type(spec_file) == dict:
@@ -29,9 +29,9 @@ class Spectrum:
       self.start_nm: int = spec_file.get('start_nm')
       self.end_nm: int = spec_file.get('end_nm')
       self._resolution: int = spec_file.get('resolution')
-      self.rgb_d65: List[float] = spec_file.get('rgb_d65')
+      self.rgb: List[float] = spec_file.get('rgb')
       self.type_max = spec_file.get('type_max')
-      self.xyz_d65: List[float] = spec_file.get('xyz_d65')
+      self.xyz: List[float] = spec_file.get('xyz')
       self.data: List[float] = [x / spec_file.get('type_max') for x in spec_file.get('data')]
   
   def __getitem__(self, item):
@@ -51,8 +51,8 @@ class Spectrum:
       'start_nm': self.start_nm,
       'end_nm': self.end_nm,
       'resolution': self._resolution,
-      'rgb_d65': self.rgb_d65,
-      'xyz_d65': self.xyz_d65,
+      'rgb': self.rgb,
+      'xyz': self.xyz,
       'data': self.data,
       'type_max': self.type_max
     }
