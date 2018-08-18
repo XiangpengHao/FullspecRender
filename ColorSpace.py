@@ -4,6 +4,7 @@ import json
 import numpy as np
 import utils
 from enum import Enum
+import warnings
 import CONSTANT
 
 
@@ -25,6 +26,11 @@ class RGB:
     rgb_gamma_rev = [utils.gamma_correct_rev(v) for v in self.np_rgb]
     xyz = np.matmul(utils.RGB2XYZ, rgb_gamma_rev)
     return XYZ(xyz[0], xyz[1], xyz[2])
+  
+  def to_uint8(self) -> np.ndarray:
+    if min(self.np_rgb) < 0 or max(self.np_rgb) > 1:
+      warnings.warn(f"Unexpected rgb value: {self.np_rgb}.", RuntimeWarning)
+    return np.rint(self.np_rgb * 255).clip(0, 255).astype(np.uint8)
   
   def to_spectrum(self) -> (Spectrum, float):
     xyz = self.to_xyz()
@@ -53,10 +59,10 @@ class XYZ:
     xyz = self.norm()
     if self.spec_type == SpecType.REFLECTANCE:
       _, index = CONSTANT.REFLECTANCE_KDD.query(xyz)
-      return CONSTANT.REFLECTANCE[index], xyz.y / CONSTANT.REFLECTANCE[index].xyz.y
+      return CONSTANT.REFLECTANCE[index], self.y / CONSTANT.REFLECTANCE[index].xyz.y
     elif self.spec_type == SpecType.ILLUMINANT:
       _, index = CONSTANT.ILLUMINANT_KDD.query(xyz)
-      return CONSTANT.ILLUMINANT[index], xyz.y / CONSTANT.ILLUMINANT[index].xyz.y
+      return CONSTANT.ILLUMINANT[index], self.y / CONSTANT.ILLUMINANT[index].xyz.y
     else:
       raise NotImplementedError()
 
@@ -80,7 +86,20 @@ class Spectrum:
     self.np_xyz: np.ndarray = self.xyz.np_xyz
     self.np_rgb: np.ndarray = self.rgb.np_rgb
     self.type_max = spec_data.get('type_max')
-    self.data: List[float] = [x / spec_data.get('type_max') for x in spec_data.get('data')]
+    self.data: np.ndarray = np.asarray([x / spec_data.get('type_max') for x in spec_data.get('data')])
+  
+  @staticmethod
+  def make_from_value(spec_data: Union[np.ndarray, List[float]],
+                      name: str = "temp", spec_type: SpecType = SpecType.REFLECTANCE,
+                      start_nm: int = 400, resolution: int = 5):
+    raise NotImplementedError()
+  
+  @staticmethod
+  def spec_to_xyz(spec_data: np.ndarray) -> XYZ:
+    x_data: float = np.dot(spec_data, CONSTANT.COLOR_MATCH['x'].data)
+    y_data: float = np.dot(spec_data, CONSTANT.COLOR_MATCH['y'].data)
+    z_data: float = np.dot(spec_data, CONSTANT.COLOR_MATCH['z'].data)
+    return XYZ(*[x_data, y_data, z_data])
   
   def __getitem__(self, item):
     if isinstance(item, slice):
@@ -92,10 +111,7 @@ class Spectrum:
       return self.data[start_i:end_i]
   
   def to_xyz(self) -> XYZ:
-    x_data: float = np.dot(self.data, CONSTANT.COLOR_MATCH['x'].data)
-    y_data: float = np.dot(self.data, CONSTANT.COLOR_MATCH['y'].data)
-    z_data: float = np.dot(self.data, CONSTANT.COLOR_MATCH['z'].data)
-    return XYZ(*[x_data, y_data, z_data])
+    return self.spec_to_xyz(self.data)
   
   def to_rgb(self):
     xyz = self.to_xyz()

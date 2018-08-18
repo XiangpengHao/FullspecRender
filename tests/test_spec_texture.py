@@ -1,4 +1,4 @@
-from SpecTexture import SpecTexture
+from TextureProcessor import SpecTexture
 
 
 def test_expand_texture():

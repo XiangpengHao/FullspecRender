@@ -1,4 +1,4 @@
-from SpecTexture import SpecTexture
+from TextureProcessor import SpecTexture
 import matplotlib.pyplot as plt
 import numpy as np
 import bpy
