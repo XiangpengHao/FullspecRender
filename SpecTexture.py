@@ -1,7 +1,7 @@
 from PIL import Image
 import numpy as np
-import RGBMatcher
-from Spectrum import Spectrum, Lights
+import Database
+from ColorSpace import Spectrum, Lights
 from typing import List, Tuple
 import pickle
 import utils
@@ -77,7 +77,7 @@ class SpecTexture:
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         cur_rbg = self.rgb_img[i, j] / 255
-        closet_spec, scale = RGBMatcher.find_nearest_reflectance(cur_rbg)
+        closet_spec, scale = Database.find_nearest_reflectance(cur_rbg)
         tmp = np.asarray(closet_spec.data) * scale * CONSTANT.SPECTRUM_SCALE * 255
         spec[i, j] = np.rint(tmp).astype(np.uint8)
       print(f'now line: {i}')

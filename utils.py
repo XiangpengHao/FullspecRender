@@ -1,5 +1,5 @@
 import numpy as np
-from Spectrum import Spectrum
+from ColorSpace import Spectrum
 from typing import Tuple, Union, List
 import warnings
 import math
