@@ -4,7 +4,7 @@ import json
 import numpy as np
 import utils
 from enum import Enum
-import Database
+import CONSTANT
 
 
 class SpecType(Enum):
@@ -19,10 +19,10 @@ class RGB:
     self.g: float = g
     self.b: float = b
     self.spec_type: SpecType = spec_type
-    self.rgb: np.ndarray = np.asarray([r, g, b])
+    self.np_rgb: np.ndarray = np.asarray([r, g, b])
   
   def to_xyz(self) -> XYZ:
-    rgb_gamma_rev = [utils.gamma_correct_rev(v) for v in self.rgb]
+    rgb_gamma_rev = [utils.gamma_correct_rev(v) for v in self.np_rgb]
     xyz = np.matmul(utils.RGB2XYZ, rgb_gamma_rev)
     return XYZ(xyz[0], xyz[1], xyz[2])
   
@@ -37,14 +37,14 @@ class XYZ:
     self.y: float = y
     self.z: float = z
     self.spec_type: SpecType = spec_type
-    self.xyz: np.ndarray = np.asarray([x, y, z])
+    self.np_xyz: np.ndarray = np.asarray([x, y, z])
   
   def norm(self) -> XYZ:
-    xyz_sum = sum(self.xyz)
+    xyz_sum = sum(self.np_xyz)
     return XYZ(self.x / xyz_sum, self.y / xyz_sum, self.z / xyz_sum)
   
   def to_srgb(self) -> RGB:
-    rgb = np.matmul(utils.XYZ2RGB, self.xyz)
+    rgb = np.matmul(utils.XYZ2RGB, self.np_xyz)
     return RGB(utils.gamma_correct(rgb[0]),
                utils.gamma_correct(rgb[1]),
                utils.gamma_correct(rgb[2]))
@@ -52,11 +52,11 @@ class XYZ:
   def to_spectrum(self) -> (Spectrum, float):
     xyz = self.norm()
     if self.spec_type == SpecType.REFLECTANCE:
-      _, index = Database.reflectance_kdd.query(xyz)
-      return Database.reflectance[index], xyz.y / Database.reflectance[index].xyz.y
+      _, index = CONSTANT.REFLECTANCE_KDD.query(xyz)
+      return CONSTANT.REFLECTANCE[index], xyz.y / CONSTANT.REFLECTANCE[index].xyz.y
     elif self.spec_type == SpecType.ILLUMINANT:
-      _, index = Database.illuminant_kdd.query(xyz)
-      return Database.illuminant[index], xyz.y / Database.illuminant[index].xyz.y
+      _, index = CONSTANT.ILLUMINANT_KDD.query(xyz)
+      return CONSTANT.ILLUMINANT[index], xyz.y / CONSTANT.ILLUMINANT[index].xyz.y
     else:
       raise NotImplementedError()
 
@@ -77,6 +77,8 @@ class Spectrum:
     self._resolution: int = data.get('resolution')
     self.rgb: RGB = RGB(*data.get('rgb'))
     self.xyz: XYZ = XYZ(*data.get('xyz'))
+    self.np_xyz: np.ndarray = self.xyz.np_xyz
+    self.np_rgb: np.ndarray = self.rgb.np_rgb
     self.type_max = data.get('type_max')
     self.data: List[float] = [x / data.get('type_max') for x in data.get('data')]
   

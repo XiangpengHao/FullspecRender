@@ -23,21 +23,3 @@ def find_nearest_reflectance(rgb: np.ndarray) -> (Spectrum, np.ndarray):
   distance, index = reflectance_kdd.query(xyz_norm)
   
   return reflectance[index], xyz[1] / reflectance[index]['xyz'][1]
-
-
-def find_nearest_illuminant(rgb: np.ndarray) -> (Spectrum, np.ndarray):
-  xyz = utils.srgb_to_xyz(rgb)
-  if sum(xyz) == 0:
-    return illuminant[0], 0
-  xyz_norm = xyz / sum(xyz)
-  distance, index = illuminant_kdd.query(xyz_norm)
-  return illuminant[index], xyz[1] / illuminant[index]['xyz'][1]
-
-
-if __name__ == '__main__':
-  # save_data()
-  # parse_model_config('model/donut.json')
-  # compute_d65_cache_xyz()
-  # test()
-  near = find_nearest_illuminant(np.asarray([0.65, 0.4, 0.35]))
-  print(near[0].json, near[1])
