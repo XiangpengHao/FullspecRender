@@ -97,14 +97,6 @@ def texture_rgb2spec(img: str, output: str):
   print(f'job done {output}')
 
 
-def test_texture():
-  input_prefix = r'C:\Users\haoxi\Dropbox\CupSimple\WoodFine26\3K'
-  output_prefix = 'rendered/results'
-  images = ['cool_small.png', 'nrm_small.png']
-  with mp.Pool(len(images)) as p:
-    p.starmap(texture_rgb2spec, [(f'{input_prefix}/{x}', f'{output_prefix}/{x}.st') for x in images])
-
-
 def expand_texture(st_file: str, output: str, ext='jpg'):
   texture = SpecTexture()
   texture.load_spec(st_file)
@@ -136,4 +128,6 @@ def test_expand_texture():
 if __name__ == '__main__':
   # texture_under_light('/home/hao/ownCloud/Barce279/3d/full_texture/leaf-veins.jpg.st',
   #                     'rendered/results/aa.jpg', Spectrum('spec/d65.json'))
-  test_expand_texture()
+  texture_rgb2spec(
+    "/Volumes/Shared/ownCloud/Barce279/3d/origin/DSC_8129.jpg",
+    "/Volumes/Shared/ownCloud/Barce279/3d/origin/DSC_8129.jpg.st")
