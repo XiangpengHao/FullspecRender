@@ -67,20 +67,20 @@ class Spectrum:
     self.type: str
     if type(spec_file) == str:
       with open(spec_file) as f:
-        data = json.load(f)
+        spec_data = json.load(f)
     else:
-      data = spec_file
-    self.name: str = data.get('name')
-    self.type: str = data.get('type')
-    self.start_nm: int = data.get('start_nm')
-    self.end_nm: int = data.get('end_nm')
-    self._resolution: int = data.get('resolution')
-    self.rgb: RGB = RGB(*data.get('rgb'))
-    self.xyz: XYZ = XYZ(*data.get('xyz'))
+      spec_data = spec_file
+    self.name: str = spec_data.get('name')
+    self.type: str = spec_data.get('type')
+    self.start_nm: int = spec_data.get('start_nm')
+    self.end_nm: int = spec_data.get('end_nm')
+    self._resolution: int = spec_data.get('resolution')
+    self.rgb: RGB = RGB(*spec_data.get('rgb'))
+    self.xyz: XYZ = XYZ(*spec_data.get('xyz'))
     self.np_xyz: np.ndarray = self.xyz.np_xyz
     self.np_rgb: np.ndarray = self.rgb.np_rgb
-    self.type_max = data.get('type_max')
-    self.data: List[float] = [x / data.get('type_max') for x in data.get('data')]
+    self.type_max = spec_data.get('type_max')
+    self.data: List[float] = [x / spec_data.get('type_max') for x in spec_data.get('data')]
   
   def __getitem__(self, item):
     if isinstance(item, slice):
@@ -92,9 +92,9 @@ class Spectrum:
       return self.data[start_i:end_i]
   
   def to_xyz(self) -> XYZ:
-    x_data: float = np.dot(self.data, ColorMatch['x'].data)
-    y_data: float = np.dot(self.data, ColorMatch['y'].data)
-    z_data: float = np.dot(self.data, ColorMatch['z'].data)
+    x_data: float = np.dot(self.data, CONSTANT.COLOR_MATCH['x'].data)
+    y_data: float = np.dot(self.data, CONSTANT.COLOR_MATCH['y'].data)
+    z_data: float = np.dot(self.data, CONSTANT.COLOR_MATCH['z'].data)
     return XYZ(*[x_data, y_data, z_data])
   
   def to_rgb(self):
@@ -127,17 +127,3 @@ class Spectrum:
   @property
   def resolution(self):
     return self._resolution
-
-
-Lights: Dict[str, Spectrum] = {
-  'd50': Spectrum('spec/d50.json'),
-  'd65': Spectrum('spec/d65.json'),
-  'illC': Spectrum('spec/illC.json'),
-  'illA': Spectrum('spec/illA.json')
-}
-
-ColorMatch: Dict[str, Spectrum] = {
-  "x": Spectrum("spec/x.json"),
-  "y": Spectrum("spec/y.json"),
-  "z": Spectrum("spec/z.json")
-}

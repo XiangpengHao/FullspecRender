@@ -13,3 +13,16 @@ REFLECTANCE_KDD = spatial.KDTree([v.np_xyz / sum(v.np_xyz) for v in REFLECTANCE]
 
 ILLUMINANT: List[Spectrum] = [Spectrum(x) for x in json.load(open('spec/database/illuminant.json'))]
 ILLUMINANT_KDD = spatial.KDTree([v.np_xyz / sum(v.np_xyz) for v in ILLUMINANT])
+
+COMMON_LIGHTS: Dict[str, Spectrum] = {
+  'd50': Spectrum('spec/d50.json'),
+  'd65': Spectrum('spec/d65.json'),
+  'illC': Spectrum('spec/illC.json'),
+  'illA': Spectrum('spec/illA.json')
+}
+
+COLOR_MATCH: Dict[str, Spectrum] = {
+  "x": Spectrum("spec/x.json"),
+  "y": Spectrum("spec/y.json"),
+  "z": Spectrum("spec/z.json")
+}
