@@ -21,15 +21,25 @@ class RGBProcessor:
       raise NotImplementedError("Only jpg format is supported")
     self.img_shape = self.img.shape[:-1]
   
-  def to_spectrum(self, output: str):
+  def to_spectrum(self, output: str = ''):
     rv_texture = np.zeros((*self.img_shape, CONSTANT.SPEC_LENGTH), dtype=np.uint8)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         rgb = RGB(*(self.img[i, j] / 255))
         spectrum, scale = rgb.to_spectrum()
-        scaled_value = spectrum.data * scale * 255 * CONSTANT.SPECTRUM_SCALE
+        # d_orgb = Spectrum.spec_to_xyz(np.multiply(spectrum.data, CONSTANT.COMMON_LIGHTS["d65"].data))
+        #
+        scaled_value = spectrum.data * scale / 2 * 255 * CONSTANT.SPECTRUM_SCALE
         rv_texture[i, j] = np.rint(scaled_value).clip(0, 255).astype(np.uint8)
+        # new_rgb = Spectrum.spec_to_xyz(
+        #   np.multiply(rv_texture[0, 0] / 255 / CONSTANT.SPECTRUM_SCALE, CONSTANT.COMMON_LIGHTS["d65"].data)).to_srgb()
       print("[to spectrum]: now at line: ", i)
+    
+    if output == '':
+      dir_path, base_name = os.path.split(self.path)
+      file_name = f"{base_name.split('.')[0]}.st"
+      output = os.path.join(dir_path, file_name)
+    
     with open(output, 'wb') as f:
       output_dict = {
         "source_path": self.path,
@@ -95,6 +105,7 @@ def arg_parse():
   parser.add_argument("-i", "--input", required=True)
   parser.add_argument("-a", "--action", required=False)
   parser.add_argument("-o", "--output", required=False)
+  parser.add_argument("-l", "--light", required=False)
   args = vars(parser.parse_args())
   
   input_file = args["input"]
@@ -105,7 +116,14 @@ def arg_parse():
     if file_type == "jpg":
       RGBProcessor(file_path=input_file).to_spectrum()
     elif file_type == "st":
-      pass
+      light_str: str = args.get("light")
+      if light_str is None:
+        light: Spectrum = CONSTANT.COMMON_LIGHTS["d65"]
+      elif light_str in CONSTANT.COMMON_LIGHTS:
+        light: Spectrum = CONSTANT.COMMON_LIGHTS[light_str]
+      else:
+        raise NotImplementedError("Unsupported light")
+      SpectrumProcessor(file_path=input_file).preview_under_light(light=light)
     else:
       raise NotImplementedError()
   print(args)

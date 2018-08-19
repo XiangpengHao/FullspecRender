@@ -34,7 +34,8 @@ class RGB:
   
   def to_uint8(self) -> np.ndarray:
     if min(self.np_rgb) < 0 or max(self.np_rgb) > 1:
-      warnings.warn(f"Unexpected rgb value: {self.np_rgb}.", RuntimeWarning)
+      in_srgb = self.to_xyz().in_srgb()
+      warnings.warn(f"\nUnexpected rgb value: {self.np_rgb}.\n in srgb {in_srgb}", RuntimeWarning)
     return np.rint(self.np_rgb * 255).clip(0, 255).astype(np.uint8)
   
   def to_spectrum(self) -> (Spectrum, float):
@@ -52,6 +53,8 @@ class XYZ:
   
   def norm(self) -> XYZ:
     xyz_sum = sum(self.np_xyz)
+    if xyz_sum == 0:
+      return XYZ(0, 0, 0)
     return XYZ(self.x / xyz_sum, self.y / xyz_sum, self.z / xyz_sum)
   
   def to_srgb(self) -> RGB:
@@ -60,14 +63,28 @@ class XYZ:
                utils.gamma_correct(rgb[1]),
                utils.gamma_correct(rgb[2]))
   
+  def in_srgb(self) -> bool:
+    from CONSTANT import R_xy, G_xy, B_xy
+    xyz_norm = self.norm()
+    xy_point = xyz_norm.np_xyz[0:2]
+    
+    def same_side(p1, p2, a, b) -> bool:
+      cp1 = np.cross(b - a, p1 - a)
+      cp2 = np.cross(b - a, p2 - a)
+      return float(np.dot(cp1, cp2)) >= 0
+    
+    return same_side(xy_point, R_xy, G_xy, B_xy) and \
+           same_side(xy_point, G_xy, R_xy, B_xy) and \
+           same_side(xy_point, B_xy, R_xy, G_xy)
+  
   def to_spectrum(self) -> (Spectrum, float):
     from CONSTANT import REFLECTANCE_KDD, REFLECTANCE, ILLUMINANT, ILLUMINANT_KDD
     xyz = self.norm()
     if self.spec_type == SpecType.REFLECTANCE:
-      _, index = REFLECTANCE_KDD.query(xyz)
+      _, index = REFLECTANCE_KDD.query(xyz.np_xyz)
       return REFLECTANCE[index], self.y / REFLECTANCE[index].xyz.y
     elif self.spec_type == SpecType.ILLUMINANT:
-      _, index = ILLUMINANT_KDD.query(xyz)
+      _, index = ILLUMINANT_KDD.query(xyz.np_xyz)
       return ILLUMINANT[index], self.y / ILLUMINANT[index].xyz.y
     else:
       raise NotImplementedError()
@@ -105,7 +122,7 @@ class Spectrum:
     x_data: float = np.dot(spec_data, color_match_dict['x']["data"])
     y_data: float = np.dot(spec_data, color_match_dict['y']["data"])
     z_data: float = np.dot(spec_data, color_match_dict['z']["data"])
-    return XYZ(*[x_data, y_data, z_data])
+    return XYZ(x_data, y_data, z_data)
   
   def __getitem__(self, item):
     if isinstance(item, slice):

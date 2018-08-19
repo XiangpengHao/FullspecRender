@@ -3,8 +3,9 @@ import json
 from scipy import spatial
 from typing import List, Dict
 from ColorSpace import Spectrum
+import numpy as np
 
-SPECTRUM_SCALE = 5
+SPECTRUM_SCALE = 10
 SPEC_LENGTH = 61
 ROOT_PATH = '/home/hao/ownCloud' if os.environ.get('P_HOME') != '1' else '/mnt/e/ownCloud'
 
@@ -26,3 +27,7 @@ COLOR_MATCH: Dict[str, Spectrum] = {
   "y": Spectrum("spec/y.json"),
   "z": Spectrum("spec/z.json")
 }
+
+R_xy = np.asarray((0.6400, 0.3300))
+G_xy = np.asarray((0.3000, 0.6000))
+B_xy = np.asarray((0.1500, 0.0600))
