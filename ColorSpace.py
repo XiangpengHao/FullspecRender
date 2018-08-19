@@ -41,6 +41,11 @@ class RGB:
   def to_spectrum(self) -> (Spectrum, float):
     xyz = self.to_xyz()
     return xyz.to_spectrum()
+  
+  def __str__(self):
+    return f"({self.r}, {self.g}, {self.b})"
+  
+  __repr__ = __str__
 
 
 class XYZ:
@@ -57,9 +62,12 @@ class XYZ:
       return XYZ(0, 0, 0)
     return XYZ(self.x / xyz_sum, self.y / xyz_sum, self.z / xyz_sum)
   
-  def to_srgb(self) -> RGB:
-    xyz_norm = self.norm()
-    rgb = np.matmul(utils.XYZ2RGB, xyz_norm.np_xyz)
+  def to_srgb(self, norm: bool = False) -> RGB:
+    if norm:
+      xyz = self.norm().np_xyz
+    else:
+      xyz = self.np_xyz
+    rgb = np.matmul(utils.XYZ2RGB, xyz)
     return RGB(utils.gamma_correct(rgb[0]),
                utils.gamma_correct(rgb[1]),
                utils.gamma_correct(rgb[2]))
@@ -89,6 +97,11 @@ class XYZ:
       return ILLUMINANT[index], self.y / ILLUMINANT[index].xyz.y
     else:
       raise NotImplementedError()
+  
+  def __str__(self):
+    return f"({self.x}, {self.y}, {self.z})"
+  
+  __repr__ = __str__
 
 
 class Spectrum:

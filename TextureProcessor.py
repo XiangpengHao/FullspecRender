@@ -27,7 +27,7 @@ class RGBProcessor:
       for j in range(self.img_shape[1]):
         rgb = RGB(*(self.img[i, j] / 255))
         spectrum, scale = rgb.to_spectrum()
-        scaled_value = spectrum.data * scale / 2 * 255 * CONSTANT.SPECTRUM_SCALE
+        scaled_value = spectrum.data * scale * 255 * CONSTANT.SPECTRUM_SCALE
         rv_texture[i, j] = np.rint(scaled_value).clip(0, 255).astype(np.uint8)
       print("[to spectrum]: now at line: ", i)
     
@@ -60,7 +60,7 @@ class SpectrumProcessor:
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         spec_data = np.multiply(self.spectrum[i, j], light.data) / 255 / CONSTANT.SPECTRUM_SCALE
-        rgb = Spectrum.spec_to_xyz(spec_data).to_srgb().to_uint8()
+        rgb = Spectrum.spec_to_xyz(spec_data).to_srgb(norm=False).to_uint8()
         rv_img[i, j:] = rgb
     img = Image.fromarray(rv_img)
     if output is None:
