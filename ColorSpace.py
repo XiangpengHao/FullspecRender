@@ -58,7 +58,8 @@ class XYZ:
     return XYZ(self.x / xyz_sum, self.y / xyz_sum, self.z / xyz_sum)
   
   def to_srgb(self) -> RGB:
-    rgb = np.matmul(utils.XYZ2RGB, self.np_xyz)
+    xyz_norm = self.norm()
+    rgb = np.matmul(utils.XYZ2RGB, xyz_norm.np_xyz)
     return RGB(utils.gamma_correct(rgb[0]),
                utils.gamma_correct(rgb[1]),
                utils.gamma_correct(rgb[2]))
@@ -109,7 +110,7 @@ class Spectrum:
     self.np_xyz: np.ndarray = self.xyz.np_xyz
     self.np_rgb: np.ndarray = self.rgb.np_rgb
     self.type_max = spec_data.get('type_max')
-    self.data: np.ndarray = np.asarray([x / spec_data.get('type_max', 1) for x in spec_data.get('data')])
+    self.data: np.ndarray = np.asarray(spec_data.get('data'))
   
   @staticmethod
   def make_from_value(spec_data: Union[np.ndarray, List[float]],
@@ -148,9 +149,9 @@ class Spectrum:
       'start_nm': self.start_nm,
       'end_nm': self.end_nm,
       'resolution': self._resolution,
-      'rgb': self.rgb,
-      'xyz': self.xyz,
-      'data': self.data,
+      'rgb': self.np_rgb.tolist(),
+      'xyz': self.np_xyz.tolist(),
+      'data': self.data.tolist(),
       'type_max': self.type_max
     }
     return rv

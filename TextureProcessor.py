@@ -27,12 +27,8 @@ class RGBProcessor:
       for j in range(self.img_shape[1]):
         rgb = RGB(*(self.img[i, j] / 255))
         spectrum, scale = rgb.to_spectrum()
-        # d_orgb = Spectrum.spec_to_xyz(np.multiply(spectrum.data, CONSTANT.COMMON_LIGHTS["d65"].data))
-        #
         scaled_value = spectrum.data * scale / 2 * 255 * CONSTANT.SPECTRUM_SCALE
         rv_texture[i, j] = np.rint(scaled_value).clip(0, 255).astype(np.uint8)
-        # new_rgb = Spectrum.spec_to_xyz(
-        #   np.multiply(rv_texture[0, 0] / 255 / CONSTANT.SPECTRUM_SCALE, CONSTANT.COMMON_LIGHTS["d65"].data)).to_srgb()
       print("[to spectrum]: now at line: ", i)
     
     if output == '':
