@@ -5,7 +5,12 @@ import numpy as np
 import utils
 from enum import Enum
 import warnings
-import CONSTANT
+
+color_match_dict = {
+  "x": json.load(open("spec/x.json")),
+  "y": json.load(open("spec/y.json")),
+  "z": json.load(open("spec/z.json"))
+}
 
 
 class SpecType(Enum):
@@ -56,13 +61,14 @@ class XYZ:
                utils.gamma_correct(rgb[2]))
   
   def to_spectrum(self) -> (Spectrum, float):
+    from CONSTANT import REFLECTANCE_KDD, REFLECTANCE, ILLUMINANT, ILLUMINANT_KDD
     xyz = self.norm()
     if self.spec_type == SpecType.REFLECTANCE:
-      _, index = CONSTANT.REFLECTANCE_KDD.query(xyz)
-      return CONSTANT.REFLECTANCE[index], self.y / CONSTANT.REFLECTANCE[index].xyz.y
+      _, index = REFLECTANCE_KDD.query(xyz)
+      return REFLECTANCE[index], self.y / REFLECTANCE[index].xyz.y
     elif self.spec_type == SpecType.ILLUMINANT:
-      _, index = CONSTANT.ILLUMINANT_KDD.query(xyz)
-      return CONSTANT.ILLUMINANT[index], self.y / CONSTANT.ILLUMINANT[index].xyz.y
+      _, index = ILLUMINANT_KDD.query(xyz)
+      return ILLUMINANT[index], self.y / ILLUMINANT[index].xyz.y
     else:
       raise NotImplementedError()
 
@@ -81,12 +87,12 @@ class Spectrum:
     self.start_nm: int = spec_data.get('start_nm')
     self.end_nm: int = spec_data.get('end_nm')
     self._resolution: int = spec_data.get('resolution')
-    self.rgb: RGB = RGB(*spec_data.get('rgb'))
-    self.xyz: XYZ = XYZ(*spec_data.get('xyz'))
+    self.rgb: RGB = RGB(*spec_data.get('rgb', [0, 0, 0]))
+    self.xyz: XYZ = XYZ(*spec_data.get('xyz', [0, 0, 0]))
     self.np_xyz: np.ndarray = self.xyz.np_xyz
     self.np_rgb: np.ndarray = self.rgb.np_rgb
     self.type_max = spec_data.get('type_max')
-    self.data: np.ndarray = np.asarray([x / spec_data.get('type_max') for x in spec_data.get('data')])
+    self.data: np.ndarray = np.asarray([x / spec_data.get('type_max', 1) for x in spec_data.get('data')])
   
   @staticmethod
   def make_from_value(spec_data: Union[np.ndarray, List[float]],
@@ -96,9 +102,9 @@ class Spectrum:
   
   @staticmethod
   def spec_to_xyz(spec_data: np.ndarray) -> XYZ:
-    x_data: float = np.dot(spec_data, CONSTANT.COLOR_MATCH['x'].data)
-    y_data: float = np.dot(spec_data, CONSTANT.COLOR_MATCH['y'].data)
-    z_data: float = np.dot(spec_data, CONSTANT.COLOR_MATCH['z'].data)
+    x_data: float = np.dot(spec_data, color_match_dict['x']["data"])
+    y_data: float = np.dot(spec_data, color_match_dict['y']["data"])
+    z_data: float = np.dot(spec_data, color_match_dict['z']["data"])
     return XYZ(*[x_data, y_data, z_data])
   
   def __getitem__(self, item):

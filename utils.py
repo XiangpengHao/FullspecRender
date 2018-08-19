@@ -1,5 +1,4 @@
 import numpy as np
-from ColorSpace import Spectrum
 from typing import Tuple, Union, List
 import warnings
 import math
@@ -41,12 +40,6 @@ def xyz_in_srgb(xyz: np.ndarray) -> bool:
                                                                                                        R_xy, G_xy)
 
 
-def spec_to_rgb(spec: Union[Spectrum, List[float], np.ndarray], magic_n=1.0) -> Tuple[float, float, float]:
-  x, y, z = spec_to_xyz(spec)
-  r, g, b = xyz_to_rgb((x, y, z), magic_n)
-  return r, g, b
-
-
 def gamma_correct(v: float) -> float:
   if v <= 0.0031308:
     return 12.92 * v
@@ -59,42 +52,6 @@ def gamma_correct_rev(v: float) -> float:
     return v / 12.92
   else:
     return np.power((v + 0.055) / (1 + 0.055), 2.4)
-
-
-x_match = Spectrum("spec/x.json")
-y_match = Spectrum("spec/y.json")
-z_match = Spectrum("spec/z.json")
-
-
-def spec_to_xyz(spec: Union[Spectrum, List[float], np.ndarray]) -> Tuple[float, float, float]:
-  if type(spec) == Spectrum:
-    x_data = float(np.dot(spec.data, x_match.data))
-    y_data = float(np.dot(spec.data, y_match.data))
-    z_data = float(np.dot(spec.data, z_match.data))
-  elif type(spec) == list or type(spec) == np.ndarray:
-    try:
-      x_data = float(np.dot(spec, x_match.data))
-      y_data = float(np.dot(spec, y_match.data))
-      z_data = float(np.dot(spec, z_match.data))
-    except ValueError:
-      x_data = float(np.dot(spec, x_match.data[:-1]))
-      y_data = float(np.dot(spec, y_match.data[:-1]))
-      z_data = float(np.dot(spec, z_match.data[:-1]))
-  else:
-    raise TypeError(f"Not supported input type:{type(spec)}")
-  return x_data, y_data, z_data
-
-
-def under_light(reflectance: Spectrum, light: Spectrum) -> Tuple[float, float, float]:
-  data = np.multiply(light.data, reflectance.data)
-  magic_n = np.dot(light.data, Spectrum('spec/y.json').data)
-  r, g, b = spec_to_rgb(data.tolist(), float(magic_n))
-  return r, g, b
-
-
-def under_d65(reflectance: Spectrum) -> Tuple[float, float, float]:
-  r, g, b = under_light(reflectance, Spectrum('spec/d65.json'))
-  return r, g, b
 
 
 np_gamma_correct_rev = np.vectorize(gamma_correct_rev)

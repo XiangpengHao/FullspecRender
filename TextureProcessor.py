@@ -2,10 +2,9 @@ from PIL import Image
 import numpy as np
 from ColorSpace import Spectrum, SpecType, RGB
 import pickle
-import multiprocessing as mp
 import os
-import json
 import CONSTANT
+import argparse
 
 ROOT_PATH = CONSTANT.ROOT_PATH
 TEXTURE_SCALE = 3
@@ -91,21 +90,26 @@ class SpectrumProcessor:
     print("[expand] Done.")
 
 
-model_path = 'Barce279/3d'
-
-
-def test_expand_texture():
-  abs_model_path = os.path.join(ROOT_PATH, model_path)
-  path2config = os.path.join(abs_model_path, 'config.json')
-  model_config = json.load(open(path2config))
+def arg_parse():
+  parser = argparse.ArgumentParser(description="Texture processing")
+  parser.add_argument("-i", "--input", required=True)
+  parser.add_argument("-a", "--action", required=False)
+  parser.add_argument("-o", "--output", required=False)
+  args = vars(parser.parse_args())
   
-  with mp.Pool(mp.cpu_count() - 1) as p:
-    p.starmap(expand_texture, [(
-      path.join(abs_model_path, model_config['texturePath'], x),
-      path.join(abs_model_path, f"intermediate/{x.split('.')[0]}"),
-      'jpg'
-    ) for x in model_config['textures']])
+  input_file = args["input"]
+  output = args.get("output")
+  action = args.get("action")
+  if action is None and output is None:
+    file_type = input_file.split(".")[-1]
+    if file_type == "jpg":
+      RGBProcessor(file_path=input_file).to_spectrum()
+    elif file_type == "st":
+      pass
+    else:
+      raise NotImplementedError()
+  print(args)
 
 
 if __name__ == '__main__':
-  pass
+  arg_parse()
