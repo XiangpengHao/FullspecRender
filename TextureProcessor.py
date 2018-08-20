@@ -55,7 +55,9 @@ class SpectrumProcessor:
     self.spectrum: np.ndarray = data["spectrum"]
     self.img_shape: (float, float) = self.spectrum.shape[:-1]
   
-  def preview_under_light(self, light: Spectrum = CONSTANT.COMMON_LIGHTS["d65"], output: str = None):
+  def preview_under_light(self, light: Spectrum = None, output: str = None):
+    if light is None:
+      light = CONSTANT.COMMON_LIGHTS["d65"]
     rv_img = np.zeros((*self.img_shape, 3), dtype=np.uint8)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
@@ -96,33 +98,38 @@ class SpectrumProcessor:
     print("[expand] Done.")
 
 
+def cli_handle_st(args: dict):
+  light = CONSTANT.COMMON_LIGHTS.get(args.get("light"))
+  action = args.get("action")
+  if action is None or action == "preview":
+    SpectrumProcessor(file_path=args["input"]).preview_under_light(light=light)
+  elif action == "expand":
+    SpectrumProcessor(file_path=args["input"]).expand_texture()
+  else:
+    raise NotImplementedError()
+
+
+def cli_handle_jpg(args: dict):
+  RGBProcessor(file_path=args["input"]).to_spectrum()
+
+
 def arg_parse():
   parser = argparse.ArgumentParser(description="Texture processing")
   parser.add_argument("-i", "--input", required=True)
   parser.add_argument("-a", "--action", required=False)
   parser.add_argument("-o", "--output", required=False)
-  parser.add_argument("-l", "--light", required=False)
+  parser.add_argument("-l", "--light", required=False, choices=CONSTANT.COMMON_LIGHTS.keys())
+  parser.add_argument("-t", "--type", required=False, choices=["illuminant", "reflectance"])
   args = vars(parser.parse_args())
   
   input_file = args["input"]
-  output = args.get("output")
-  action = args.get("action")
-  if action is None and output is None:
-    file_type = input_file.split(".")[-1]
-    if file_type == "jpg":
-      RGBProcessor(file_path=input_file).to_spectrum()
-    elif file_type == "st":
-      light_str: str = args.get("light")
-      if light_str is None:
-        light: Spectrum = CONSTANT.COMMON_LIGHTS["d65"]
-      elif light_str in CONSTANT.COMMON_LIGHTS:
-        light: Spectrum = CONSTANT.COMMON_LIGHTS[light_str]
-      else:
-        raise NotImplementedError("Unsupported light")
-      SpectrumProcessor(file_path=input_file).preview_under_light(light=light)
-    else:
-      raise NotImplementedError()
-  print(args)
+  file_type = input_file.split(".")[-1]
+  if file_type == "st":
+    cli_handle_st(args)
+  elif file_type == "jpg":
+    cli_handle_jpg(args)
+  else:
+    raise NotImplementedError("Unsupported file extension")
 
 
 if __name__ == '__main__':
