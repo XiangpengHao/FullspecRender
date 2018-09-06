@@ -5,6 +5,7 @@ import pickle
 import os
 import CONSTANT
 import argparse
+from joblib import Parallel, delayed
 
 ROOT_PATH = CONSTANT.ROOT_PATH
 TEXTURE_SCALE = 3
@@ -116,9 +117,11 @@ def cli_handle_dir(dirname: str, args: dict):
   if action is None or action == 'jpg':
     all_pics_jpg = [p for p in os.listdir(dirname)
                     if p.endswith('jpg') and not p.startswith('.')]
-    for p in all_pics_jpg:
-      print(p)
-      RGBProcessor(file_path=os.path.join(dirname, p)).to_spectrum()
+    processors = [RGBProcessor(file_path=os.path.join(dirname, x)) for x in all_pics_jpg]
+    Parallel(n_jobs=11)(delayed(x.to_spectrum)() for x in processors)
+    # for p in all_pics_jpg:
+    #   print(p)
+    #   RGBProcessor(file_path=os.path.join(dirname, p)).to_spectrum()
   elif action == 'expand':
     all_pics_st = [p for p in os.listdir(dirname)
                    if p.endswith('.st') and not p.startswith('.')]
