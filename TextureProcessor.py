@@ -9,8 +9,6 @@ import argparse
 ROOT_PATH = CONSTANT.ROOT_PATH
 TEXTURE_SCALE = 3
 
-SPEC_LENGTH = 60
-
 
 class RGBProcessor:
   def __init__(self, file_path: str, texture_type: SpecType = SpecType.REFLECTANCE):
@@ -113,6 +111,24 @@ def cli_handle_jpg(args: dict):
   RGBProcessor(file_path=args["input"]).to_spectrum()
 
 
+def cli_handle_dir(dirname: str, args: dict):
+  action = args.get('action')
+  if action is None or action == 'jpg':
+    all_pics_jpg = [p for p in os.listdir(dirname)
+                    if p.endswith('jpg') and not p.startswith('.')]
+    for p in all_pics_jpg:
+      print(p)
+      RGBProcessor(file_path=os.path.join(dirname, p)).to_spectrum()
+  elif action == 'expand':
+    all_pics_st = [p for p in os.listdir(dirname)
+                   if p.endswith('.st') and not p.startswith('.')]
+    for p in all_pics_st:
+      print(p)
+      SpectrumProcessor(file_path=os.path.join(dirname, p)).expand_texture()
+  else:
+    raise NotImplementedError()
+
+
 def arg_parse():
   parser = argparse.ArgumentParser(description="Texture processing")
   parser.add_argument("-i", "--input", required=True)
@@ -122,7 +138,10 @@ def arg_parse():
   parser.add_argument("-t", "--type", required=False, choices=["illuminant", "reflectance"])
   args = vars(parser.parse_args())
   
-  input_file = args["input"]
+  input_file: str = args["input"]
+  if os.path.isdir(input_file):
+    return cli_handle_dir(input_file, args)
+  
   file_type = input_file.split(".")[-1]
   if file_type == "st":
     cli_handle_st(args)
