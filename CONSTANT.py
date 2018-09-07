@@ -4,9 +4,11 @@ from scipy import spatial
 from typing import List, Dict
 from ColorSpace import Spectrum
 import numpy as np
+import multiprocessing
 
 SPECTRUM_SCALE = 2400
 SPEC_LENGTH = 61
+CPU_CORES = multiprocessing.cpu_count() - 1
 ROOT_PATH = '/home/hao/ownCloud' if os.environ.get('P_HOME') != '1' else '/mnt/e/ownCloud'
 
 REFLECTANCE: List[Spectrum] = [Spectrum(x) for x in json.load(open('spec/database/reflectance.json'))]

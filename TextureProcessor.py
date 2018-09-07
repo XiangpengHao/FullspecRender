@@ -7,6 +7,7 @@ import CONSTANT
 import argparse
 from joblib import Parallel, delayed
 
+os.system("taskset -p 0xff %d" % os.getpid())
 ROOT_PATH = CONSTANT.ROOT_PATH
 TEXTURE_SCALE = 3
 
@@ -30,9 +31,13 @@ class RGBProcessor:
       line_result[j] = np.rint(scaled_value).clip(0, 255).astype(np.uint8)
     return line_result
   
-  def to_spectrum(self, output: str = ''):
+  def to_spectrum(self, output: str = '', parallel=None):
     rv_texture = np.zeros((*self.img_shape, CONSTANT.SPEC_LENGTH), dtype=np.uint8)
-    results = Parallel(n_jobs=11)(delayed(self._parallel_to_spectrum_line)(i) for i in range(self.img_shape[0]))
+    if parallel is None:
+      results = Parallel(n_jobs=CONSTANT.CPU_CORES)(
+        delayed(self._parallel_to_spectrum_line)(i) for i in range(self.img_shape[0]))
+    else:
+      results = parallel(delayed(self._parallel_to_spectrum_line)(i) for i in range(self.img_shape[0]))
     for i in range(self.img_shape[0]):
       rv_texture[i, :, :] = results[i]
     
@@ -88,7 +93,7 @@ class SpectrumProcessor:
     if not os.path.exists(output_path):
       os.mkdir(output_path)
     
-    for wave_len in range(0, CONSTANT.SPEC_LENGTH, 3):
+    for wave_len in range(0, CONSTANT.SPEC_LENGTH - 1, 3):
       print("[expand] Now output wavelength: ", wave_len)
       result = self.spectrum[:, :, wave_len:wave_len + 3]
       
@@ -119,8 +124,10 @@ def cli_handle_dir(dirname: str, args: dict):
   if action is None or action == 'jpg':
     all_pics_jpg = [p for p in os.listdir(dirname)
                     if p.endswith('jpg') and not p.startswith('.')]
-    for x in all_pics_jpg:
-      RGBProcessor(file_path=os.path.join(dirname, x)).to_spectrum()
+    with Parallel(n_jobs=CONSTANT.CPU_CORES) as parallel:
+      for x in all_pics_jpg:
+        print(f"working on {x}")
+        RGBProcessor(file_path=os.path.join(dirname, x)).to_spectrum(parallel=parallel)
   elif action == 'expand':
     all_pics_st = [p for p in os.listdir(dirname)
                    if p.endswith('.st') and not p.startswith('.')]
