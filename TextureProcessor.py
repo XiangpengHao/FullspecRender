@@ -20,15 +20,21 @@ class RGBProcessor:
       raise NotImplementedError("Only jpg format is supported")
     self.img_shape = self.img.shape[:-1]
   
+  def _parallel_to_spectrum_line(self, i):
+    print("[to spectrum]: now at line: ", i)
+    line_result = np.zeros((self.img_shape[1], CONSTANT.SPEC_LENGTH), dtype=np.uint8)
+    for j in range(self.img_shape[1]):
+      rgb = RGB(*(self.img[i, j] / 255))
+      spectrum, scale = rgb.to_spectrum()
+      scaled_value = spectrum.data * scale * 255 * CONSTANT.SPECTRUM_SCALE
+      line_result[j] = np.rint(scaled_value).clip(0, 255).astype(np.uint8)
+    return line_result
+  
   def to_spectrum(self, output: str = ''):
     rv_texture = np.zeros((*self.img_shape, CONSTANT.SPEC_LENGTH), dtype=np.uint8)
+    results = Parallel(n_jobs=11)(delayed(self._parallel_to_spectrum_line)(i) for i in range(self.img_shape[0]))
     for i in range(self.img_shape[0]):
-      for j in range(self.img_shape[1]):
-        rgb = RGB(*(self.img[i, j] / 255))
-        spectrum, scale = rgb.to_spectrum()
-        scaled_value = spectrum.data * scale * 255 * CONSTANT.SPECTRUM_SCALE
-        rv_texture[i, j] = np.rint(scaled_value).clip(0, 255).astype(np.uint8)
-      print("[to spectrum]: now at line: ", i)
+      rv_texture[i, :, :] = results[i]
     
     if output == '':
       dir_path, base_name = os.path.split(self.path)
@@ -82,13 +88,9 @@ class SpectrumProcessor:
     if not os.path.exists(output_path):
       os.mkdir(output_path)
     
-    result = np.zeros((*self.img_shape, 3), dtype=np.uint8)
     for wave_len in range(0, CONSTANT.SPEC_LENGTH, 3):
       print("[expand] Now output wavelength: ", wave_len)
-      for i in range(self.img_shape[0]):
-        for j in range(self.img_shape[1]):
-          tmp = self.spectrum[i, j, wave_len:wave_len + 3]
-          result[i, j] = tmp
+      result = self.spectrum[:, :, wave_len:wave_len + 3]
       
       output_wavelength = 400 + wave_len * 5
       Image.fromarray(result).save(
@@ -117,17 +119,19 @@ def cli_handle_dir(dirname: str, args: dict):
   if action is None or action == 'jpg':
     all_pics_jpg = [p for p in os.listdir(dirname)
                     if p.endswith('jpg') and not p.startswith('.')]
-    processors = [RGBProcessor(file_path=os.path.join(dirname, x)) for x in all_pics_jpg]
-    Parallel(n_jobs=11)(delayed(x.to_spectrum)() for x in processors)
-    # for p in all_pics_jpg:
-    #   print(p)
-    #   RGBProcessor(file_path=os.path.join(dirname, p)).to_spectrum()
+    for x in all_pics_jpg:
+      RGBProcessor(file_path=os.path.join(dirname, x)).to_spectrum()
   elif action == 'expand':
     all_pics_st = [p for p in os.listdir(dirname)
                    if p.endswith('.st') and not p.startswith('.')]
+    prefix, basename = os.path.split(dirname)
+    output = os.path.join(prefix, f'{basename}_expanded')
+    if not os.path.exists(output):
+      os.mkdir(output)
     for p in all_pics_st:
       print(p)
-      SpectrumProcessor(file_path=os.path.join(dirname, p)).expand_texture()
+      SpectrumProcessor(file_path=os.path.join(dirname, p)).expand_texture(
+        os.path.join(output, p.split('.')[0]))
   else:
     raise NotImplementedError()
 

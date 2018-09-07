@@ -5,7 +5,7 @@ from typing import List, Dict
 from ColorSpace import Spectrum
 import numpy as np
 
-SPECTRUM_SCALE = 800
+SPECTRUM_SCALE = 2400
 SPEC_LENGTH = 61
 ROOT_PATH = '/home/hao/ownCloud' if os.environ.get('P_HOME') != '1' else '/mnt/e/ownCloud'
 
