@@ -7,10 +7,6 @@ import os
 import json
 from enum import Enum
 from shutil import copyfileobj
-import time
-
-MAX_NATURAL = 4096
-MAX_LIGHT_POWER = 120
 
 ROOT_PATH = '/home/hao/ownCloud/FullSpecRendering/' if os.name == 'posix' else \
   '/mnt/e/ownCloud/FullSpecRendering'
@@ -18,13 +14,13 @@ ROOT_PATH = '/home/hao/ownCloud/FullSpecRendering/' if os.name == 'posix' else \
 
 def get_light_spectral(file_name) -> List[float]:
   with open(path.join(ROOT_PATH, file_name)) as f:
-    data = [float(x) / MAX_LIGHT_POWER for x in f.readlines()]
+    data = [float(x) for x in f.readlines()]
   return data
 
 
 def get_natural_spectral(file_name) -> List[float]:
   with open(path.join(ROOT_PATH, file_name)) as f:
-    data = [float(x) / MAX_NATURAL for x in f.readlines()[:-1]]
+    data = [float(x) for x in f.readlines()[:-1]]
   return data
 
 
@@ -77,7 +73,7 @@ class SpectrumObj:
     elif blender_type == BlenderType.MATERIAL:
       self.blender_obj = bpy.data.materials[obj_name].node_tree.nodes['Diffuse BSDF'].inputs[0]
     else:
-      raise RuntimeError("not supported blender type: {blender_type.name}")
+      raise RuntimeError(f"not supported blender type: {blender_type.name}")
     
     self.spec_data = Spectrum(spc_path)
   
@@ -134,26 +130,12 @@ class FullSpecRender:
     bpy.ops.render.render(write_still=True)
 
 
-def test_texture():
-  spc_objs = [
-    SpectrumObj('Sun', 'spec/d65.json', BlenderType.LIGHTS),
-    # SpectrumObj('Material.001', 'spec/green_leaf.json', BlenderType.MATERIAL)
-    SpectrumTexture('model/textures/2_d65.png', 'rendered/texture_src/t_2', BlenderType.TEXTURE)
-  ]
-  renderer = FullSpecRender(spc_objs)
-  for i in range(400, 700, 15):
-    print('now rendering {i}_{i+5}_{i+10}' + str(i))
-    renderer.render(i, 'rendered/textured/b')
-
-
-working_dir = '/home/hao/ownCloud'
-model_config_path = os.path.join(working_dir, 'Barce279/3d/config.json')
-
-
 def main():
+  model_config_path = os.environ["MODEL"]
   config = json.load(open(model_config_path))
-  texture_dir = path.join(working_dir, config['rootPath'], config['texturePath'])
-  intermediate_dir = path.join(working_dir, config['rootPath'], 'intermediate')
+  working_dir = config['rootPath']
+  texture_dir = path.join(working_dir, config['texturePath'])
+  intermediate_dir = path.join(working_dir, config['intermediatePath'])
   
   spc_objs = [
     SpectrumObj('sun_set', 'spec/illA.json', BlenderType.LIGHTS),

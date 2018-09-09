@@ -7,7 +7,6 @@ import CONSTANT
 import argparse
 from joblib import Parallel, delayed
 
-os.system("taskset -p 0xff %d" % os.getpid())
 ROOT_PATH = CONSTANT.ROOT_PATH
 TEXTURE_SCALE = 3
 
