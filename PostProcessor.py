@@ -17,7 +17,7 @@ class PostProcessor:
     
     all_files = os.listdir(folder)
     # The image should be named like _400_405_410_nm.png
-    self.all_images = [x for x in all_files if x.endswith("nm.png")]
+    self.all_images = [x for x in all_files if x.endswith("nm.png") and not x.startswith('.')]
     assert len(self.all_images) == CONSTANT.SPEC_LENGTH // 3
   
   def compose(self):
@@ -36,6 +36,9 @@ class PostProcessor:
     spectrum = wave_length_map[sorted_waves[0]]
     for key in sorted_waves[1:]:
       spectrum = np.append(spectrum, wave_length_map[key], axis=2)
+    # interpolate the spectrum from 60 values to 61 values
+    spectrum = np.append(spectrum, wave_length_map[sorted_waves[-1]], axis=2)
+    
     self.spectrum = spectrum
   
   def output_as_srgb(self, output: str = None):
