@@ -61,7 +61,7 @@ class PostProcessor:
     
     if output is None:
       dir_path, base_name = os.path.split(self.folder)
-      output = dir_path[:-1] + "_output.png"
+      output = f'{dir_path[:-1]}_{base_name}.png'
     img.save(output)
 
 

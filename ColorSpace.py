@@ -4,7 +4,9 @@ import json
 import numpy as np
 import utils
 from enum import Enum
-import warnings
+import logging
+
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
 
 color_match_dict = {
   "x": json.load(open("spec/x.json")),
@@ -35,7 +37,7 @@ class RGB:
   def to_uint8(self) -> np.ndarray:
     if min(self.np_rgb) < 0 or max(self.np_rgb) > 1:
       in_srgb = self.to_xyz().in_srgb()
-      warnings.warn(f"\nUnexpected rgb value: {self.np_rgb}.\n in srgb {in_srgb}", RuntimeWarning)
+      logging.warning(f"Unexpected rgb value: {self.np_rgb}. in srgb {in_srgb}")
     return np.rint(self.np_rgb * 255).clip(0, 255).astype(np.uint8)
   
   def to_spectrum(self) -> (Spectrum, float):

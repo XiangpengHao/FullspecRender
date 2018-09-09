@@ -70,7 +70,7 @@ def distance_v2(va: Tuple[float, float], vb: Tuple[float, float]):
 
 def xyz_to_srgb(xyz: np.ndarray) -> np.ndarray:
   if np.min(xyz) < 0 and np.max(xyz) > 1:
-    warnings.warn(f'unexpected xyz: {xyz}')
+    warnings.warn(f'unexpected xyz: {xyz}', stacklevel=2)
   rgb_linear = np.matmul(XYZ2RGB, np.asarray(xyz).T)
   return np.asarray([gamma_correct(c) for c in rgb_linear])
 
@@ -79,7 +79,7 @@ def xyz_to_rgb(xyz: Tuple[float, float, float], magic_n: float) -> Tuple[float, 
   xyz_array = np.asarray(xyz)
   xyz_array /= magic_n
   if min(xyz_array) < 0 or max(xyz_array) > 1:
-    warnings.warn(f"abnormal xyz: {xyz_array}")
+    warnings.warn(f"abnormal xyz: {xyz_array}", stacklevel=2)
   rgb = np.matmul(XYZ2RGB, np.asarray(xyz_array).T)
   
   return (gamma_correct(rgb[0]),

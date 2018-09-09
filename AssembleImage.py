@@ -76,7 +76,7 @@ class SpecImage:
         xyz = utils.spec_to_xyz(self.spectrum[i, j, :] / 512)
         rgb = utils.xyz_to_srgb(np.asarray(xyz))
         if min(rgb) < 0 or max(rgb) > 1:
-          warnings.warn(f"unexpected rgb: {rgb}")
+          warnings.warn(f"unexpected rgb: {rgb}", stacklevel=2)
         rgb_data[i, j, :] = np.asarray(
           [int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255)])
     img = Image.fromarray(rgb_data, 'RGB')
@@ -98,7 +98,7 @@ class SpecImage:
         cur_xyz = xyz_data[i, j, :]
         rgb = utils.xyz_to_srgb(cur_xyz)
         if min(rgb) < 0 or max(rgb) > 1:
-          warnings.warn(f"unexpected rgb: {rgb}, xyz in srgb: {utils.xyz_in_srgb(cur_xyz)}")
+          warnings.warn(f"unexpected rgb: {rgb}, xyz in srgb: {utils.xyz_in_srgb(cur_xyz)}", stacklevel=1)
           rgb = np.clip(rgb, 0, 1)
         rgb_data[i, j, :] = np.asarray(
           [int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255)])
