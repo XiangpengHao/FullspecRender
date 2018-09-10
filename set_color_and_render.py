@@ -138,7 +138,7 @@ def main():
   intermediate_dir = path.join(working_dir, config['intermediatePath'])
   
   spc_objs = [
-    SpectrumObj('sun_set', 'spec/illA.json', BlenderType.LIGHTS),
+    # SpectrumObj('sun_set', 'spec/illA.json', BlenderType.LIGHTS),
     SpectrumObj('white_lotus_orange', 'spec/munsell/m_2.5YR6_14.json', BlenderType.MATERIAL),
     SpectrumObj('trunk', 'spec/munsell/m_2.5Y8.5_6.json', BlenderType.MATERIAL),
     *[SpectrumTexture(path.join(texture_dir, x[:-3]),
