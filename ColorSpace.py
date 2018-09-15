@@ -34,10 +34,12 @@ class RGB:
     xyz = np.matmul(utils.RGB2XYZ, rgb_gamma_rev)
     return XYZ(xyz[0], xyz[1], xyz[2])
   
-  def to_uint8(self) -> np.ndarray:
+  def to_uint8(self, verbose=False) -> np.ndarray:
     if min(self.np_rgb) < 0 or max(self.np_rgb) > 1:
       in_srgb = self.to_xyz().in_srgb()
       logging.warning(f"Unexpected rgb value: {self.np_rgb}. in srgb {in_srgb}")
+      if verbose:
+        self.np_rgb = np.asarray([1, 0, 0] if in_srgb else [0, 1, 0])
     return np.rint(self.np_rgb * 255).clip(0, 255).astype(np.uint8)
   
   def to_spectrum(self) -> (Spectrum, float):

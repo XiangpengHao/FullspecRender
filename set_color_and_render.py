@@ -137,21 +137,16 @@ def main():
   texture_dir = path.join(working_dir, config['texturePath'])
   intermediate_dir = path.join(working_dir, config['intermediatePath'])
   
-  spc_objs = [
-    SpectrumObj('Area.003', 'spec/d65.json', BlenderType.LIGHTS),
-    SpectrumObj('Area', 'spec/d65.json', BlenderType.LIGHTS),
-    SpectrumObj('Area.006', 'spec/d65.json', BlenderType.LIGHTS),
-    SpectrumObj('Area.005', 'spec/d65.json', BlenderType.LIGHTS),
-    SpectrumObj('Area.001', 'spec/d65.json', BlenderType.LIGHTS),
-    SpectrumObj('Area.002', 'spec/d65.json', BlenderType.LIGHTS),
-    SpectrumObj('white_lotus_orange', 'spec/munsell/m_2.5YR6_14.json', BlenderType.MATERIAL),
-    SpectrumObj('trunk', 'spec/munsell/m_2.5Y8.5_6.json', BlenderType.MATERIAL),
-    *[SpectrumTexture(path.join(texture_dir, x[:-3]),
-                      path.join(intermediate_dir, x.split('.')[0]),
-                      BlenderType.TEXTURE)
+  normal_objects = [
+    SpectrumObj(x["name"], x["spectrum"], BlenderType[x["type"]]) for x in config["objects"]
+  ]
+  texture_objects = [
+    *[SpectrumTexture(
+      path.join(texture_dir, x[:-3]), path.join(intermediate_dir, x.split('.')[0]),
+      BlenderType.TEXTURE)
       for x in config['textures']]
   ]
-  renderer = FullSpecRender(spc_objs, scene=config['scene'])
+  renderer = FullSpecRender(normal_objects + texture_objects, scene=config['scene'])
   for k, vp in enumerate(config['viewports']):
     output_dir = f"{working_dir}/rendered/{config['name']}/vp_{k}/"
     os.makedirs(os.path.dirname(output_dir))

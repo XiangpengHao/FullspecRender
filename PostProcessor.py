@@ -4,8 +4,8 @@ from typing import Dict
 import numpy as np
 from PIL import Image
 from ColorSpace import Spectrum, XYZ, RGB
-import warnings
 import os
+import logging
 import argparse
 
 
@@ -41,13 +41,14 @@ class PostProcessor:
     
     self.spectrum = spectrum
   
-  def output_as_srgb(self, output: str = None):
+  def output_as_srgb(self, output: str = None, verbose=False):
     if self.spectrum is None:
       raise ValueError("Spectrum is none")
     xyz_image = np.zeros((*self.img_shape, 3), dtype=np.double)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         xyz = Spectrum.spec_to_xyz(self.spectrum[i, j, :])
+        # xyz = Spectrum.spec_to_xyz(np.multiply(self.spectrum[i, j, :], CONSTANT.COMMON_LIGHTS["d50"].data))
         xyz_image[i, j, :] = xyz.np_xyz
     max_xyz = np.amax(xyz_image)
     xyz_image /= max_xyz
@@ -56,26 +57,28 @@ class PostProcessor:
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         rgb = XYZ(*xyz_image[i, j, :]).to_srgb()
-        rgb_image[i, j, :] = rgb.to_uint8()
+        rgb_image[i, j, :] = rgb.to_uint8(verbose)
     img = Image.fromarray(rgb_image, "RGB")
     
     if output is None:
       dir_path, base_name = os.path.split(self.folder)
-      output = f'{dir_path[:-1]}_{base_name}.png'
+      output = f'{dir_path}/{base_name}.png'
     img.save(output)
 
 
 def arg_parse():
+  logging.basicConfig(filename="PostProcess.log", level=logging.WARNING)
   parser = argparse.ArgumentParser(description="Compose a set of source images to full spectrum images")
   parser.add_argument("-i", "--input", required=True)
   parser.add_argument("-o", "--output", required=False)
+  parser.add_argument("-v", "--verbose", action='store_true')
   args = vars(parser.parse_args())
   input_path = args["input"]
   if not os.path.isdir(input_path):
     raise ValueError("input should be a directory")
   processor = PostProcessor(input_path)
   processor.compose()
-  processor.output_as_srgb()
+  processor.output_as_srgb(verbose=args['verbose'])
 
 
 if __name__ == "__main__":
