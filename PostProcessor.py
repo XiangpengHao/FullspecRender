@@ -7,6 +7,7 @@ from ColorSpace import Spectrum, XYZ, RGB
 import os
 import logging
 import argparse
+import utils
 
 
 class PostProcessor:
@@ -24,7 +25,7 @@ class PostProcessor:
     wave_length_map: Dict[int, np.ndarray] = {}
     for f in self.all_images:
       waves = [int(x) for x in f.split("_")[1:4]]
-      tmp_img: np.ndarray = np.array(Image.open(os.path.join(self.folder, f)))
+      tmp_img: np.ndarray = np.array(Image.open(os.path.join(self.folder, f))) / 255
       if self.img_shape is None:
         self.img_shape = tmp_img.shape[:-1]
       elif self.img_shape != tmp_img.shape[:-1]:
@@ -41,13 +42,17 @@ class PostProcessor:
     
     self.spectrum = spectrum
   
+  @staticmethod
+  def _undo_gamma_correction(spectrum: np.ndarray):
+    return np.asarray([utils.gamma_correct_rev(x) for x in spectrum])
+  
   def output_as_srgb(self, output: str = None, verbose=False):
     if self.spectrum is None:
       raise ValueError("Spectrum is none")
     xyz_image = np.zeros((*self.img_shape, 3), dtype=np.double)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
-        xyz = Spectrum.spec_to_xyz(self.spectrum[i, j, :])
+        xyz = Spectrum.spec_to_xyz(self._undo_gamma_correction(self.spectrum[i, j, :]))
         # xyz = Spectrum.spec_to_xyz(np.multiply(self.spectrum[i, j, :], CONSTANT.COMMON_LIGHTS["d50"].data))
         xyz_image[i, j, :] = xyz.np_xyz
     max_xyz = np.amax(xyz_image)
