@@ -28,6 +28,7 @@ class BlenderType(Enum):
   LIGHTS = 0
   MATERIAL = 1
   TEXTURE = 2
+  NODE = 3
 
 
 class Spectrum:
@@ -72,6 +73,8 @@ class SpectrumObj:
       self.blender_obj = bpy.data.lamps[obj_name].node_tree.nodes['Emission'].inputs[0]
     elif blender_type == BlenderType.MATERIAL:
       self.blender_obj = bpy.data.materials[obj_name].node_tree.nodes['Diffuse BSDF'].inputs[0]
+    elif blender_type == BlenderType.NODE:
+      self.blender_obj = bpy.data.worlds['sunset'].node_tree.nodes[obj_name].inputs[0]
     else:
       raise RuntimeError(f"not supported blender type: {blender_type.name}")
     
@@ -119,6 +122,15 @@ class FullSpecRender:
     self.bpy_scene.render.resolution_y = resolution[1]
     self.bpy_scene.render.resolution_percentage = 100
     self.bpy_scene.render.filepath = path.join(ROOT_PATH, output_path)
+    self.bpy_scene.cycles.device = 'GPU'
+    context = bpy.context
+    cycles_prefs = context.user_preferences.addons['cycles'].preferences
+    cycles_prefs.compute_device_type = "CUDA"
+    for device in cycles_prefs.devices:
+      device.use = False
+    for device in cycles_prefs.devices[:-1]:
+      device.use = True
+    
     if viewport is not None:
       camera = self.bpy_scene.camera
       camera.location.x = viewport['location'][0]

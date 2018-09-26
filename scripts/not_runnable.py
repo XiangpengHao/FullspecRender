@@ -28,14 +28,17 @@ def set_all_glossy_bsdf():
       glossy.inputs[0].default_value = (0.4, 0.4, 0.4, 1)
 
 
+vp_list = []
+
+
 def get_cam():
-  s = bpy.data.scenes['Scene'].camera
+  s = bpy.data.scenes['2- time: sunset']
   loc = s.camera.location
   rot = s.camera.rotation_euler
-  print("{")
-  print(f'\"location\":{[loc.x,loc.y,loc.z]},')
-  print(f'\"rotation\":{[rot.x,rot.y,rot.z]}')
-  print("},")
+  output = "{{\"location\":{},\"rotation\":{}}}".format([loc.x, loc.y, loc.z],
+                                                      [rot.x, rot.y, rot.z])
+  vp_list.append(output)
+  print(output)
 
 
 def align_light_with_camera():

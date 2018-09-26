@@ -1,6 +1,7 @@
 import os
 import CONSTANT
 from typing import Dict
+import numpy
 import numpy as np
 from PIL import Image
 from ColorSpace import Spectrum, XYZ, RGB
@@ -8,6 +9,7 @@ import os
 import logging
 import argparse
 import utils
+from joblib import Parallel, delayed
 
 
 class PostProcessor:
@@ -44,21 +46,22 @@ class PostProcessor:
   
   @staticmethod
   def _undo_gamma_correction(spectrum: np.ndarray):
-    return np.asarray([utils.gamma_correct_rev(x) for x in spectrum])
+    return utils.np_gamma_correct_rev(spectrum)
   
   def output_as_srgb(self, output: str = None, verbose=False):
     if self.spectrum is None:
       raise ValueError("Spectrum is none")
-    xyz_image = np.zeros((*self.img_shape, 3), dtype=np.double)
+    xyz_image = np.zeros((self.img_shape[0], self.img_shape[1], 3), dtype=np.double)
+    self.spectrum = utils.np_gamma_correct_rev(self.spectrum)
+    
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
-        xyz = Spectrum.spec_to_xyz(self._undo_gamma_correction(self.spectrum[i, j, :]))
-        # xyz = Spectrum.spec_to_xyz(np.multiply(self.spectrum[i, j, :], CONSTANT.COMMON_LIGHTS["d50"].data))
+        xyz = Spectrum.spec_to_xyz(self.spectrum[i, j, :])
         xyz_image[i, j, :] = xyz.np_xyz
     max_xyz = np.amax(xyz_image)
     xyz_image /= max_xyz
     
-    rgb_image = np.zeros((*self.img_shape, 3), dtype=np.uint8)
+    rgb_image = np.zeros((self.img_shape[0], self.img_shape[1], 3), dtype=np.uint8)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         rgb = XYZ(*xyz_image[i, j, :]).to_srgb()
@@ -67,7 +70,7 @@ class PostProcessor:
     
     if output is None:
       dir_path, base_name = os.path.split(self.folder)
-      output = f'{dir_path}/{base_name}.png'
+      output = '{}/{}.png'.format(dir_path, base_name)
     img.save(output)
 
 
@@ -77,13 +80,23 @@ def arg_parse():
   parser.add_argument("-i", "--input", required=True)
   parser.add_argument("-o", "--output", required=False)
   parser.add_argument("-v", "--verbose", action='store_true')
+  parser.add_argument("-d", "--dir", action='store_true')
   args = vars(parser.parse_args())
   input_path = args["input"]
   if not os.path.isdir(input_path):
     raise ValueError("input should be a directory")
-  processor = PostProcessor(input_path)
-  processor.compose()
-  processor.output_as_srgb(verbose=args['verbose'])
+  if args['dir']:
+    dirs = [os.path.join(input_path, x) for x in os.listdir(input_path) if
+            os.path.isdir(os.path.join(input_path, x))]
+    processors = [PostProcessor(x) for x in dirs]
+    [x.compose() for x in processors]
+    Parallel(n_jobs=4)(
+      delayed(i.output_as_srgb)(verbose=False) for i in processors
+    )
+  else:
+    processor = PostProcessor(input_path)
+    processor.compose()
+    processor.output_as_srgb(verbose=args['verbose'])
 
 
 if __name__ == "__main__":
