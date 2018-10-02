@@ -12,18 +12,6 @@ ROOT_PATH = '/home/hao/ownCloud/FullSpecRendering/' if os.name == 'posix' else \
   '/mnt/e/ownCloud/FullSpecRendering'
 
 
-def get_light_spectral(file_name) -> List[float]:
-  with open(path.join(ROOT_PATH, file_name)) as f:
-    data = [float(x) for x in f.readlines()]
-  return data
-
-
-def get_natural_spectral(file_name) -> List[float]:
-  with open(path.join(ROOT_PATH, file_name)) as f:
-    data = [float(x) for x in f.readlines()[:-1]]
-  return data
-
-
 class BlenderType(Enum):
   LIGHTS = 0
   MATERIAL = 1
@@ -31,76 +19,43 @@ class BlenderType(Enum):
   NODE = 3
 
 
-class Spectrum:
-  def __init__(self, spec_file: Union[str, dict]):
-    self.name = ''
-    self.type = ''
-    if type(spec_file) == str:
-      with open(os.path.join(ROOT_PATH, spec_file)) as f:
-        data = json.load(f)
-      self.name = data.get('name')
-      self.type = data.get('type')
-      self.start_nm = data.get('start_nm')
-      self.end_nm = data.get('end_nm')
-      self.resolution = data.get('resolution')
-      self.rgb_d65 = data.get('rgb_d65')
-      self.xyz_d65 = data.get('xyz_d65')
-      self.data = [x / data.get('type_max') for x in data.get('data')]
-    elif type(spec_file) == dict:
-      self.name = spec_file.get('name')
-      self.type = spec_file.get('type')
-      self.start_nm = spec_file.get('start_nm')
-      self.end_nm = spec_file.get('end_nm')
-      self.resolution = spec_file.get('resolution')
-      self.rgb_d65 = spec_file.get('rgb_d65')
-      self.xyz_d65 = spec_file.get('xyz_d65')
-      self.data = [x / spec_file.get('type_max') for x in spec_file.get('data')]
-  
-  def __getitem__(self, item):
-    if isinstance(item, slice):
-      if item.start < self.start_nm or item.stop > self.end_nm:
-        raise ArithmeticError("nm not in range")
-      start_i = (item.start - self.start_nm) // self.resolution
-      end_i = (item.stop - self.start_nm) // self.resolution
-      return self.data[start_i:end_i]
-
-
-class SpectrumObj:
-  def __init__(self, obj_name: str, spc_path: str, blender_type: BlenderType):
-    self.name = obj_name
-    self.blender_type = blender_type
-    if blender_type == BlenderType.LIGHTS:
-      self.blender_obj = bpy.data.lamps[obj_name].node_tree.nodes['Emission'].inputs[0]
-    elif blender_type == BlenderType.MATERIAL:
-      self.blender_obj = bpy.data.materials[obj_name].node_tree.nodes['Diffuse BSDF'].inputs[0]
-    elif blender_type == BlenderType.NODE:
-      self.blender_obj = bpy.data.worlds['sunset'].node_tree.nodes[obj_name].inputs[0]
+class BlenderNode:
+  def __init__(self, node_type: str, name: str, node: str, input_slot: str, values: list):
+    self.node_type = node_type
+    self.name = name
+    self.node = node
+    self.input_slot = input_slot
+    self.values = values
+    if self.node_type == 'MATERIAL':
+      blender_prefix = bpy.data.materials[name]
+    elif self.node_type == 'WORLDS':
+      blender_prefix = bpy.data.worlds[name]
+    elif self.node_type == 'LIGHTS':
+      blender_prefix = bpy.data.lights[name]
     else:
-      raise RuntimeError(f"not supported blender type: {blender_type.name}")
-    
-    self.spec_data = Spectrum(spc_path)
+      raise NotImplementedError
+    self.node_ref = blender_prefix.node_tree.nodes[node].inputs[input_slot]
   
-  def set_color(self, color: Tuple[float, float, float, float]):
-    self.blender_obj.default_value = color
+  def set_color(self, wavelength: int):
+    value_index = (wavelength - 400) // 15
+    self.node_ref.default_value = (*self.values[value_index:value_index + 3], 1)
 
 
 class SpectrumTexture:
-  def __init__(self, texture_dst: str, texture_src_folder: str, blender_type: BlenderType):
-    assert blender_type == BlenderType.TEXTURE
+  def __init__(self, texture_dst: str, texture_src_folder: str):
     self.texture_dst = texture_dst
     self.texture_src_folder = texture_src_folder
   
   def set_color(self, wavelength: int):
     src_file = '{}/_{}_{}_{}_nm.jpg'.format(self.texture_src_folder, wavelength, wavelength + 5, wavelength + 10)
-    # src_file = f'{self.texture_src_folder}/_{wavelength}_{wavelength+5}_{wavelength+10}nm.png'
     with open(os.path.join(ROOT_PATH, src_file), 'rb') as src, \
         open(os.path.join(ROOT_PATH, self.texture_dst), 'wb') as dst:
       copyfileobj(src, dst)
 
 
 class FullSpecRender:
-  def __init__(self, objects: List[Union[SpectrumObj, SpectrumTexture]], scene='Scene'):
-    self.normal_objects = [o for o in objects if isinstance(o, SpectrumObj)]
+  def __init__(self, objects: List[Union[BlenderNode, SpectrumTexture]], scene='Scene'):
+    self.normal_objects = [o for o in objects if isinstance(o, BlenderNode)]
     self.texture_objects = [o for o in objects if isinstance(o, SpectrumTexture)]
     self.bpy_scene = bpy.data.scenes[scene]
   
@@ -109,8 +64,7 @@ class FullSpecRender:
     for obj in self.texture_objects:
       obj.set_color(index_i)
     for obj in self.normal_objects:
-      spc_rgb = (*(obj.spec_data[index_i:index_i + 15]), 1)
-      obj.set_color(spc_rgb)
+      obj.set_color(index_i)
   
   def render(self, index: int, output_prefix: str, resolution=(640, 480), viewport=None):
     self._set_color(index)
@@ -128,7 +82,7 @@ class FullSpecRender:
     cycles_prefs.compute_device_type = "CUDA"
     for device in cycles_prefs.devices:
       device.use = False
-    for device in cycles_prefs.devices:
+    for device in cycles_prefs.devices[1:]:
       device.use = True
     
     if viewport is not None:
@@ -151,16 +105,18 @@ def main():
   start_from = config['startFrom']
   
   normal_objects = [
-    SpectrumObj(x["name"], x["spectrum"], BlenderType[x["type"]]) for x in config["objects"]
+    BlenderNode(x['type'], x['name'], x['node'], x['input'], x['value']) for x in config["objects"]
   ]
-  texture_objects = [
-    *[SpectrumTexture(
-      path.join(texture_dir, x[:-3]), path.join(intermediate_dir, x.split('.')[0]),
-      BlenderType.TEXTURE)
-      for x in config['textures']]
-  ]
+  all_textures = os.listdir(intermediate_dir)
+  target_textures = [os.path.join(texture_dir, x + '.jpg') for x in all_textures]
+  source_textures = [os.path.join(intermediate_dir, x) for x in all_textures]
+  zipped = zip(target_textures, source_textures)
+  texture_objects = [SpectrumTexture(*x) for x in zipped]
+  
   renderer = FullSpecRender(normal_objects + texture_objects, scene=config['scene'])
   for k, vp in enumerate(config['viewports']):
+    if k < start_from:
+      continue
     output_dir = f"{working_dir}/rendered/{config['name']}/vp_{k}/"
     os.makedirs(os.path.dirname(output_dir))
     for i in range(400, 700, 15):

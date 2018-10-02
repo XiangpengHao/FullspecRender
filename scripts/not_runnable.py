@@ -32,7 +32,7 @@ vp_list = []
 
 
 def get_cam():
-  s = bpy.data.scenes['2- time: sunset']
+  s = bpy.data.scenes['Scene']
   loc = s.camera.location
   rot = s.camera.rotation_euler
   output = "{{\"location\":{},\"rotation\":{}}}".format([loc.x, loc.y, loc.z],

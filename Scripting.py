@@ -1,6 +1,7 @@
 import numpy as np
 import CONSTANT
 import json
+import os
 from ColorSpace import Spectrum, SpecType, XYZ, RGB
 
 
@@ -20,5 +21,28 @@ def update_xyz_cache():
   # print(rv)rv
 
 
+def replace_rgb_in_config():
+  config_path = os.environ['MODEL_CONFIG']
+  config = json.load(open(config_path))
+  objects = config['objects']
+  for obj in objects:
+    rgb_value = obj['value'][:-1]
+    rgb = RGB(*rgb_value)
+    spec, scale = rgb.to_spectrum()
+    # spec.data *= scale
+    avg_spec = spec.data.mean()
+    avg_rgb = rgb.np_rgb.mean()
+    obj['value'] = (spec.data / avg_spec * avg_rgb).tolist()
+    # obj['value'] = (spec.data * scale * 3000).tolist()
+  json.dump(config, open(config_path, 'w'))
+  print(objects)
+
+
+def read_all_nodes_from_model(config):
+  pass
+
+
 if __name__ == '__main__':
-  update_xyz_cache()
+  config_path = os.environ['MODEL_CONFIG']
+  config = json.load(open(config_path))
+  read_all_nodes_from_model(config)
