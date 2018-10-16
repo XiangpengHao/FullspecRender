@@ -1,21 +1,23 @@
 ### Model checklist:
 
-1. All emissions should use illuminant spectrum
+* All emissions should use illuminant spectrum
 
-2. No color ramp
+* turn-off every emission and test if the result is empty
 
-3. No Hue saturation value
+* No color ramp
 
-4. Mix between color and Texture not work
+* No Hue saturation value
 
-5. Nodes to take care:
+* Mix between color and Texture not work
+
+* Nodes to take care:
 
     Principled BSDF
 
     Mix
     
-6. Textures must be none-color data
+* Textures must be none-color data
 
-7. Clean world texture is necessary
+* Clean world texture is necessary
 
-8. Be careful when dealing with random
+* Be careful when dealing with random

@@ -74,6 +74,12 @@ class PostProcessor:
     img.save(output)
 
 
+def parallel_output(f):
+  processor = PostProcessor(f)
+  processor.compose()
+  processor.output_as_srgb(verbose=False)
+
+
 def arg_parse():
   logging.basicConfig(filename="PostProcess.log", level=logging.WARNING)
   parser = argparse.ArgumentParser(description="Compose a set of source images to full spectrum images")
@@ -86,13 +92,15 @@ def arg_parse():
   if not os.path.isdir(input_path):
     raise ValueError("input should be a directory")
   if args['dir']:
-    dirs = [os.path.join(input_path, x) for x in os.listdir(input_path) if
+    sorted_dir = sorted(os.listdir(input_path))
+    dirs = [os.path.join(input_path, x) for x in sorted_dir if
             os.path.isdir(os.path.join(input_path, x))]
-    processors = [PostProcessor(x) for x in dirs]
-    [x.compose() for x in processors]
-    Parallel(n_jobs=4)(
-      delayed(i.output_as_srgb)(verbose=False) for i in processors
-    )
+    Parallel(n_jobs=8)(delayed(parallel_output)(x) for x in dirs)
+    # processors = [PostProcessor(x) for x in dirs]
+    # [x.compose() for x in processors]
+    # Parallel(n_jobs=4)(
+    #  delayed(i.output_as_srgb)(verbose=False) for i in processors
+    # )
   else:
     processor = PostProcessor(input_path)
     processor.compose()

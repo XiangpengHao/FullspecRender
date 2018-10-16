@@ -28,6 +28,20 @@ def set_all_glossy_bsdf():
       glossy.inputs[0].default_value = (0.4, 0.4, 0.4, 1)
 
 
+def set_all_specular_0_in_principle_BSDF():
+  for m in D.materials:
+    principle = m.node_tree.nodes.get('Principled BSDF')
+    if principle:
+      print(m.name)
+      principle.inputs['Specular'].default_value = 0
+    glossy = m.node_tree.nodes.get('Glossy BSDF')
+    if glossy:
+      value = glossy.inputs[0].default_value
+      if value[0] == value[1] and value[1] == value[2]:
+        print(m.name)
+        glossy.inputs[0].default_value = (0, 0, 0, 1)
+
+
 vp_list = []
 
 
@@ -36,7 +50,7 @@ def get_cam():
   loc = s.camera.location
   rot = s.camera.rotation_euler
   output = "{{\"location\":{},\"rotation\":{}}}".format([loc.x, loc.y, loc.z],
-                                                      [rot.x, rot.y, rot.z])
+                                                        [rot.x, rot.y, rot.z])
   vp_list.append(output)
   print(output)
 

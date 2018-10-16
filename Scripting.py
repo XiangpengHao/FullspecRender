@@ -24,7 +24,7 @@ def update_xyz_cache():
 def replace_rgb_in_config():
   config_path = os.environ['MODEL_CONFIG']
   config = json.load(open(config_path))
-  objects = config['objects']
+  objects = config['colorNodes']
   for obj in objects:
     rgb_value = obj['value'][:-1]
     rgb = RGB(*rgb_value)
@@ -45,4 +45,4 @@ def read_all_nodes_from_model(config):
 if __name__ == '__main__':
   config_path = os.environ['MODEL_CONFIG']
   config = json.load(open(config_path))
-  read_all_nodes_from_model(config)
+  replace_rgb_in_config()
