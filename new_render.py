@@ -46,22 +46,23 @@ class BlenderNode:
       self.node_ref.default_value = self.values[value_index]
 
 
-class SpectrumTexture:
-  def __init__(self, texture_dst: str, texture_src_folder: str):
-    self.texture_dst = texture_dst
-    self.texture_src_folder = texture_src_folder
+class TextureNode:
+  def __init__(self, name, node, value, intermediate_path):
+    self.texture_ref = bpy.data.materials[name].node_tree.nodes[node]
+    self.image_name = value
+    self.intermediate_path = intermediate_path
   
   def set_color(self, wavelength: int):
-    src_file = '{}/_{}_{}_{}_nm.jpg'.format(self.texture_src_folder, wavelength, wavelength + 5, wavelength + 10)
-    with open(os.path.join(ROOT_PATH, src_file), 'rb') as src, \
-        open(os.path.join(ROOT_PATH, self.texture_dst), 'wb') as dst:
-      copyfileobj(src, dst)
+    src_file = f'{self.intermediate_path}/{self.image_name}/_{wavelength}_{wavelength+5}_{wavelength+10}_nm.jpg'
+    new_img = bpy.data.images.load(filepath=src_file, check_existing=False)
+    # print(new_img)
+    self.texture_ref.image = new_img
 
 
 class FullSpecRender:
-  def __init__(self, objects: List[Union[BlenderNode, SpectrumTexture]], scene='Scene'):
+  def __init__(self, objects: List[Union[BlenderNode, TextureNode]], scene='Scene'):
     self.normal_objects = [o for o in objects if isinstance(o, BlenderNode)]
-    self.texture_objects = [o for o in objects if isinstance(o, SpectrumTexture)]
+    self.texture_objects = [o for o in objects if isinstance(o, TextureNode)]
     self.bpy_scene = bpy.data.scenes[scene]
   
   # index_i is sth like 400, 405, 410
@@ -82,15 +83,21 @@ class FullSpecRender:
     self.bpy_scene.render.resolution_percentage = 100
     self.bpy_scene.render.filepath = path.join(ROOT_PATH, output_path)
     self.bpy_scene.render.engine = 'CYCLES'
-    self.bpy_scene.cycles.device = 'GPU'
-    context = bpy.context
-    cycles_prefs = context.user_preferences.addons['cycles'].preferences
-    cycles_prefs.compute_device_type = "CUDA"
-    for device in cycles_prefs.devices:
-      device.use = False
-    for device in cycles_prefs.devices[1:]:
-      device.use = True
     
+    device = os.environ.get('RENDER_DEVICE')
+    if device == "GPU":
+      self.bpy_scene.cycles.device = 'GPU'
+      context = bpy.context
+      cycles_prefs = context.user_preferences.addons['cycles'].preferences
+      cycles_prefs.compute_device_type = "CUDA"
+      for device in cycles_prefs.devices:
+        device.use = False
+      for device in cycles_prefs.devices[:]:
+        device.use = True
+    else:
+      self.bpy_scene.cycles.device = 'CPU'
+      self.bpy_scene.render.tile_x = 32
+      self.bpy_scene.render.tile_y = 32
     if viewport is not None:
       camera = self.bpy_scene.camera
       camera.location.x = viewport['location'][0]
@@ -114,12 +121,12 @@ def set_locations(data):
 
 
 def main():
-  model_config_path = os.environ["MODEL"]
-  config = json.load(open(model_config_path))
-  working_dir = config['rootPath']
-  texture_dir = path.join(working_dir, config['texturePath'])
+  working_dir = os.environ["MODEL"]
+  config_file = os.environ["CONFIG_FILE"]
+  config = json.load(open(path.join(working_dir, config_file)))
   intermediate_dir = path.join(working_dir, config['intermediatePath'])
   start_from = config['startFrom']
+  resolution = config.get('resolution', [960, 720])
   
   normal_objects = []
   for node in config['colorNodes']:
@@ -130,11 +137,10 @@ def main():
       for n in node['name']:
         normal_objects.append(BlenderNode(node['type'], n, node['node'], node['input'], node['value']))
   
-  all_textures = os.listdir(intermediate_dir)
-  target_textures = [os.path.join(texture_dir, x + '.jpg') for x in all_textures]
-  source_textures = [os.path.join(intermediate_dir, x) for x in all_textures]
-  zipped = zip(target_textures, source_textures)
-  texture_objects = [SpectrumTexture(*x) for x in zipped]
+  texture_objects = []
+  for node in config['textureNodes']:
+    texture_objects.append(
+      TextureNode(name=node['name'], node=node['node'], value=node['value'], intermediate_path=intermediate_dir))
   
   if "locations" in config:
     set_locations(config["locations"])
@@ -144,14 +150,25 @@ def main():
     viewports = json.load(open(os.path.join(working_dir, config['viewports'])))
   else:
     viewports = config['viewports']
-  for k, vp in enumerate(viewports):
-    if k < start_from:
-      continue
+  
+  task_id = os.environ.get('SLURM_ARRAY_TASK_ID', None)
+  if task_id:
+    k = int(task_id)
+    vp = viewports[k]
     output_dir = f"{working_dir}/rendered/{config['name']}/vp_{k}/"
     os.makedirs(os.path.dirname(output_dir))
     for i in range(400, 700, 15):
       print(f'now rendering {i}_{i+5}_{i+10}')
-      renderer.render(i, output_dir, resolution=(960, 720), viewport=vp)
+      renderer.render(i, output_dir, resolution=resolution, viewport=vp)
+  else:
+    for k, vp in enumerate(viewports):
+      if k < start_from:
+        continue
+      output_dir = f"{working_dir}/rendered/{config['name']}/vp_{k}/"
+      os.makedirs(os.path.dirname(output_dir))
+      for i in range(400, 700, 15):
+        print(f'now rendering {i}_{i+5}_{i+10}')
+        renderer.render(i, output_dir, resolution=resolution, viewport=vp)
 
 
 if __name__ == '__main__':
