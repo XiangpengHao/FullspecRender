@@ -11,6 +11,7 @@ import argparse
 import utils
 from joblib import Parallel, delayed
 
+logger = logging.getLogger(__name__)
 
 class PostProcessor:
   def __init__(self, folder: str):
@@ -21,7 +22,8 @@ class PostProcessor:
     all_files = os.listdir(folder)
     # The image should be named like _400_405_410_nm.png
     self.all_images = [x for x in all_files if x.endswith("nm.png") and not x.startswith('.')]
-    assert len(self.all_images) == CONSTANT.SPEC_LENGTH // 3
+    if len(self.all_images) != CONSTANT.SPEC_LENGTH // 3:
+      raise AssertionError(f'Invalid spectrum folder: {folder}')
   
   def compose(self):
     wave_length_map: Dict[int, np.ndarray] = {}
@@ -75,10 +77,12 @@ class PostProcessor:
 
 
 def parallel_output(f):
-  processor = PostProcessor(f)
-  processor.compose()
-  processor.output_as_srgb(verbose=False)
-
+  try:
+    processor = PostProcessor(f)
+    processor.compose()
+    processor.output_as_srgb(verbose=False)
+  except AssertionError as e:
+    logger.error(e)
 
 def arg_parse():
   logging.basicConfig(filename="PostProcess.log", level=logging.WARNING)
@@ -96,11 +100,6 @@ def arg_parse():
     dirs = [os.path.join(input_path, x) for x in sorted_dir if
             os.path.isdir(os.path.join(input_path, x))]
     Parallel(n_jobs=8)(delayed(parallel_output)(x) for x in dirs)
-    # processors = [PostProcessor(x) for x in dirs]
-    # [x.compose() for x in processors]
-    # Parallel(n_jobs=4)(
-    #  delayed(i.output_as_srgb)(verbose=False) for i in processors
-    # )
   else:
     processor = PostProcessor(input_path)
     processor.compose()
