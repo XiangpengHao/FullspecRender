@@ -4,7 +4,8 @@ import os
 import re
 
 INPUT_KEYWORDS = ['Color']
-NODE_KEYWORDS = ['Mix', 'BSDF']
+# NODE_KEYWORDS = ['Mix', 'BSDF']
+NODE_KEYWORDS = ['Image Texture']
 
 
 class ModelDataExporter:
@@ -24,10 +25,20 @@ class ModelDataExporter:
       self.cur_node = n
       for nk in NODE_KEYWORDS:
         if nk in n.name:
-          self.parse_inputs(n.inputs)
+          self.parse_texture(n.inputs)
           break
   
-  def parse_inputs(self, inputs):
+  def parse_texture(self, inputs):
+    payload = {
+      'type': 'TEXTURE',
+      'name': self.cur_material.name,
+      'node': self.cur_node.name,
+      'input': 'image',
+      'value': self.cur_node.image.filepath
+    }
+    self.result.append(payload)
+  
+  def parse_color(self, inputs):
     for i in inputs:
       if (re.match(r'^Color[12]?$', i.name) or i.name == 'Base Color') \
           and not i.links:
