@@ -67,6 +67,17 @@ def align_light_with_camera():
   light.location = cam_loc
   light.rotation_euler = cam_rot
 
+def get_object_loc_rot(name):
+  obj = bpy.data.objects[name]
+  loc = [x for x in obj.location]
+  rot = [x for x in obj.rotation_euler]
+  payload={
+    "name":name,
+    "location":loc,
+    "rotation":rot
+  }
+  print(payload)
+
 
 if __name__ == '__main__':
   spec_texture_histogram()
