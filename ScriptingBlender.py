@@ -4,8 +4,8 @@ import os
 import re
 
 INPUT_KEYWORDS = ['Color']
-# NODE_KEYWORDS = ['Mix', 'BSDF']
-NODE_KEYWORDS = ['Image Texture']
+NODE_KEYWORDS = ['Mix', 'BSDF']
+# NODE_KEYWORDS = ['Image Texture']
 
 
 class ModelDataExporter:
@@ -17,6 +17,8 @@ class ModelDataExporter:
   def parse(self):
     materials = bpy.data.materials
     for m in materials:
+      if not m.node_tree:
+        continue
       self.cur_material = m
       self.parse_node_tree(m.node_tree.nodes)
   
@@ -25,7 +27,7 @@ class ModelDataExporter:
       self.cur_node = n
       for nk in NODE_KEYWORDS:
         if nk in n.name:
-          self.parse_texture(n.inputs)
+          self.parse_color(n.inputs)
           break
   
   def parse_texture(self, inputs):

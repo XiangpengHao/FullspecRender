@@ -74,9 +74,7 @@ class FullSpecRender:
   
   def render(self, index: int, output_prefix: str, resolution=(640, 480), viewport=None):
     self._set_color(index)
-    output_path = '{output_prefix}_{index}_{index_5}_{index_10}_nm.png'.format(output_prefix=output_prefix,
-                                                                               index=index, index_5=index + 5,
-                                                                               index_10=index + 10)
+    output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.png'
     
     self.bpy_scene.render.resolution_x = resolution[0]
     self.bpy_scene.render.resolution_y = resolution[1]
