@@ -135,19 +135,28 @@ def main():
       for n in node['name']:
         normal_objects.append(BlenderNode(node['type'], n, node['node'], node['input'], node['value']))
   
+  
+  if isinstance(config['textureNodes'], str):
+    texture_nodes = json.load(open(os.path.join(working_dir, config['textureNodes'])))
+  else:
+    texture_nodes=config['textureNodes']
+
   texture_objects = []
-  for node in config['textureNodes']:
+  for node in texture_nodes:
     texture_objects.append(
       TextureNode(name=node['name'], node=node['node'], value=node['value'], intermediate_path=intermediate_dir))
   
+
   if "locations" in config:
     set_locations(config["locations"])
   
   renderer = FullSpecRender(normal_objects + texture_objects, scene=config['scene'])
+
   if isinstance(config['viewports'], str):
     viewports = json.load(open(os.path.join(working_dir, config['viewports'])))
   else:
     viewports = config['viewports']
+  
   
   task_id = os.environ.get('SLURM_ARRAY_TASK_ID', None)
   if task_id:
