@@ -136,7 +136,7 @@ def main():
         normal_objects.append(BlenderNode(node['type'], n, node['node'], node['input'], node['value'], node.get('value_length', 3)))
     elif isinstance(node['node'], list):
       for n in node['node']:
-        normal_objects.append(BlenderNode(node['type'], n['name'], n, node['input'], node['value'], node.get('value_length', 3)))
+        normal_objects.append(BlenderNode(node['type'], node['name'], n, node['input'], node['value'], node.get('value_length', 3)))
 
   
   if isinstance(config['textureNodes'], str):
