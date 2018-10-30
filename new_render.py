@@ -128,13 +128,16 @@ def main():
   
   normal_objects = []
   for node in config['colorNodes']:
-    if isinstance(node['name'], str):
+    if isinstance(node['name'], str) and isinstance(node['node'], str):
       normal_objects.append(BlenderNode(node['type'], node['name'], node['node'], node['input'], node['value'],
                                         node.get('value_length', 3)))
     elif isinstance(node['name'], list):
       for n in node['name']:
-        normal_objects.append(BlenderNode(node['type'], n, node['node'], node['input'], node['value']))
-  
+        normal_objects.append(BlenderNode(node['type'], n, node['node'], node['input'], node['value'], node.get('value_length', 3)))
+    elif isinstance(node['node'], list):
+      for n in node['node']:
+        normal_objects.append(BlenderNode(node['type'], n['name'], n, node['input'], node['value'], node.get('value_length', 3)))
+
   
   if isinstance(config['textureNodes'], str):
     texture_nodes = json.load(open(os.path.join(working_dir, config['textureNodes'])))
