@@ -18,6 +18,7 @@ def set_locations(data):
 
 
 def render(scene_name, output_path, resolution, viewpoint):
+  bpy.context.scene.use_nodes = True
   scene = bpy.data.scenes[scene_name]
   tree = scene.node_tree
   links = tree.links
