@@ -27,6 +27,9 @@ def render(scene_name, output_path, resolution, viewpoint):
   
   rl = tree.nodes.new('CompositorNodeRLayers')
   
+  compositor=tree.nodes.new('CompositorNodeComposite')
+  links.new(rl.outputs[0], compositor.inputs[0])
+
   normalize = tree.nodes.new('CompositorNodeNormalize')
   links.new(rl.outputs[2], normalize.inputs[0])
   
