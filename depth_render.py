@@ -3,7 +3,7 @@ import os
 import shutil
 import json
 
-DEPTH_OUTPUT_FILENAME = 'Image0001.png'
+DEPTH_OUTPUT_FILENAME = 'Image0002.png'
 
 
 def set_locations(data):

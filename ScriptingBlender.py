@@ -4,8 +4,9 @@ import os
 import re
 
 INPUT_KEYWORDS = ['Color']
-NODE_KEYWORDS = ['Mix', 'BSDF']
+#NODE_KEYWORDS = ['Mix', 'BSDF']
 # NODE_KEYWORDS = ['Image Texture']
+NODE_KEYWORDS= ['Emission']
 
 
 class ModelDataExporter:
