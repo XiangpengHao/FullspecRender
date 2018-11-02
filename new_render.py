@@ -74,13 +74,14 @@ class FullSpecRender:
   
   def render(self, index: int, output_prefix: str, resolution=(640, 480), viewport=None):
     self._set_color(index)
-    output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.png'
+    output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.exr'
     
     self.bpy_scene.render.resolution_x = resolution[0]
     self.bpy_scene.render.resolution_y = resolution[1]
     self.bpy_scene.render.resolution_percentage = 100
     self.bpy_scene.render.filepath = path.join(ROOT_PATH, output_path)
     self.bpy_scene.render.engine = 'CYCLES'
+    self.bpy_scene.render.samples = os.environ.get('RENDER_SAMPLES', 500)
     
     device = os.environ.get('RENDER_DEVICE')
     if device == "GPU":

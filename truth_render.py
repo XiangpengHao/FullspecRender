@@ -3,7 +3,7 @@ import os
 import shutil
 import json
 
-DEPTH_OUTPUT_FILENAME = 'Image0001.png'
+DEPTH_OUTPUT_FILENAME = 'Image0001.exr'
 
 
 def set_locations(data):
@@ -16,9 +16,12 @@ def set_locations(data):
     bpy_obj.rotation_euler.y = obj['rotation'][1]
     bpy_obj.rotation_euler.z = obj['rotation'][2]
 
+def context_setup():
+  bpy.context.scene.use_nodes = True
+  bpy.context.scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+  
 
 def render(scene_name, output_path, resolution, viewpoint):
-  bpy.context.scene.use_nodes = True
   scene = bpy.data.scenes[scene_name]
   tree = scene.node_tree
   links = tree.links
@@ -73,6 +76,8 @@ def main():
   output_dir = os.path.join(working_dir, 'rendered', config['name'], '')
   print(output_dir, config['name'])
   os.makedirs(os.path.dirname(output_dir))
+
+  context_setup()
   for k, vp in enumerate(viewports):
     if k < start_from:
       continue
