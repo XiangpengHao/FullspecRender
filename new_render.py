@@ -72,7 +72,8 @@ class FullSpecRender:
     for obj in self.normal_objects:
       obj.set_color(index_i)
   
-  def render(self, index: int, output_prefix: str, resolution=(640, 480), viewport=None):
+  def render(self, index: int, output_prefix: str, 
+              resolution=(640, 480), viewport=None, layers=None):
     self._set_color(index)
     output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.exr'
     
@@ -118,6 +119,12 @@ def set_locations(data):
     bpy_obj.rotation_euler.y = obj['rotation'][1]
     bpy_obj.rotation_euler.z = obj['rotation'][2]
 
+def set_render_layers(layers):
+  if not layers:
+    return
+  render_layer=bpy.context.scene.view_layers['RenderLayer']
+  for layer in layers:
+    setattr(render_layer,layer,True)
 
 def main():
   working_dir = os.environ["MODEL"]
@@ -163,6 +170,8 @@ def main():
   
   
   task_id = os.environ.get('SLURM_ARRAY_TASK_ID', None)
+  set_render_layers(config.get('renderLayers',None))
+  
   if task_id:
     k = int(task_id)
     vp = viewports[k]
