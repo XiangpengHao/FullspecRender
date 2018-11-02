@@ -14,7 +14,7 @@ from joblib import Parallel, delayed
 
 logger = logging.getLogger(__name__)
 
-CHANNELS=["RenderLayer.Shadow.R","RenderLayer.Shadow.G","RenderLayer.Shadow.B"]
+CHANNELS=["Composite.Combined.R","Composite.Combined.G","Composite.Combined.B"]
 
 class PostProcessor:
   def __init__(self, folder: str):
@@ -82,12 +82,38 @@ class PostProcessor:
   def compose(self):
     if self.file_type=='exr':
       self.exr_data_loader()
+      self.output_as_exr()
     elif self.file_type=='png':
       self.png_data_loader()
+      self.output_as_srgb()
 
   @staticmethod
   def _undo_gamma_correction(spectrum: np.ndarray):
     return utils.np_gamma_correct_rev(spectrum)
+
+  def output_as_exr(self, output:str=None, verbose=False):
+    if self.spectrum is None:
+      raise ValueError("spectrum is none")
+    rgb_image = np.zeros((self.img_shape[0], self.img_shape[1], 3), dtype=np.double)
+    for i in range(self.img_shape[0]):
+      for j in range(self.img_shape[1]):
+        xyz = Spectrum.spec_to_xyz(self.spectrum[i, j, :])
+        rgb_image[i, j, :] = xyz.to_srgb().np_rgb
+
+    if output is None:
+      dir_path, base_name = os.path.split(self.folder)
+      output = '{}/{}.exr'.format(dir_path, base_name)
+
+    HEADER=OpenEXR.Header(self.img_shape[1],self.img_shape[0])
+    half_chan=Imath.Channel(Imath.PixelType(Imath.PixelType.HALF))
+    HEADER['channels']=dict([(c, half_chan) for c in 'RGB'])
+    exr=OpenEXR.OutputFile(output,HEADER)
+    exr.writePixels({'R':rgb_image[:,:,0].astype(np.float16).tostring(),
+                    'G':rgb_image[:,:,1].astype(np.float16).tostring(),
+                    'B':rgb_image[:,:,2].astype(np.float16).tostring()})
+    exr.close()
+
+
 
   def output_as_srgb(self, output: str = None, verbose=False):
     if self.spectrum is None:
@@ -119,7 +145,6 @@ def parallel_output(f):
   try:
     processor = PostProcessor(f)
     processor.compose()
-    processor.output_as_srgb(verbose=False)
   except AssertionError as e:
     logger.error(e)
 
