@@ -72,8 +72,8 @@ class FullSpecRender:
     for obj in self.normal_objects:
       obj.set_color(index_i)
   
-  def render(self, index: int, output_prefix: str, 
-              resolution=(640, 480), viewport=None, layers=None):
+  def render(self, index: int, output_prefix: str,
+             resolution=(640, 480), viewport=None):
     self._set_color(index)
     output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.exr'
     
@@ -82,7 +82,7 @@ class FullSpecRender:
     self.bpy_scene.render.resolution_percentage = 100
     self.bpy_scene.render.filepath = path.join(ROOT_PATH, output_path)
     self.bpy_scene.render.engine = 'CYCLES'
-    self.bpy_scene.render.samples = os.environ.get('RENDER_SAMPLES', 500)
+    self.bpy_scene.cycles.samples = int(os.environ.get('RENDER_SAMPLES', 500))
     
     device = os.environ.get('RENDER_DEVICE')
     if device == "GPU":
@@ -92,7 +92,7 @@ class FullSpecRender:
       cycles_prefs.compute_device_type = "CUDA"
       for device in cycles_prefs.devices:
         device.use = False
-      for device in cycles_prefs.devices[:]:
+      for device in cycles_prefs.devices[1:]:
         device.use = True
     else:
       self.bpy_scene.cycles.device = 'CPU'
@@ -119,12 +119,14 @@ def set_locations(data):
     bpy_obj.rotation_euler.y = obj['rotation'][1]
     bpy_obj.rotation_euler.z = obj['rotation'][2]
 
+
 def set_render_layers(layers):
   if not layers:
     return
-  render_layer=bpy.context.scene.view_layers['RenderLayer']
+  render_layer = bpy.context.scene.view_layers['RenderLayer']
   for layer in layers:
-    setattr(render_layer,layer,True)
+    setattr(render_layer, layer, True)
+
 
 def main():
   working_dir = os.environ["MODEL"]
@@ -141,36 +143,35 @@ def main():
                                         node.get('value_length', 3)))
     elif isinstance(node['name'], list):
       for n in node['name']:
-        normal_objects.append(BlenderNode(node['type'], n, node['node'], node['input'], node['value'], node.get('value_length', 3)))
+        normal_objects.append(
+          BlenderNode(node['type'], n, node['node'], node['input'], node['value'], node.get('value_length', 3)))
     elif isinstance(node['node'], list):
       for n in node['node']:
-        normal_objects.append(BlenderNode(node['type'], node['name'], n, node['input'], node['value'], node.get('value_length', 3)))
-
+        normal_objects.append(
+          BlenderNode(node['type'], node['name'], n, node['input'], node['value'], node.get('value_length', 3)))
   
   if isinstance(config['textureNodes'], str):
     texture_nodes = json.load(open(os.path.join(working_dir, config['textureNodes'])))
   else:
-    texture_nodes=config['textureNodes']
-
+    texture_nodes = config['textureNodes']
+  
   texture_objects = []
   for node in texture_nodes:
     texture_objects.append(
       TextureNode(name=node['name'], node=node['node'], value=node['value'], intermediate_path=intermediate_dir))
   
-
   if "locations" in config:
     set_locations(config["locations"])
   
   renderer = FullSpecRender(normal_objects + texture_objects, scene=config['scene'])
-
+  
   if isinstance(config['viewports'], str):
     viewports = json.load(open(os.path.join(working_dir, config['viewports'])))
   else:
     viewports = config['viewports']
   
-  
   task_id = os.environ.get('SLURM_ARRAY_TASK_ID', None)
-  set_render_layers(config.get('renderLayers',None))
+  set_render_layers(config.get('renderLayers', None))
   
   if task_id:
     k = int(task_id)

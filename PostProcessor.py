@@ -14,26 +14,31 @@ from joblib import Parallel, delayed
 
 logger = logging.getLogger(__name__)
 
-CHANNELS=["Composite.Combined.R","Composite.Combined.G","Composite.Combined.B"]
+CHANNELS = CONSTANT.EXR_LAYER["glossy"]
+float_pixel = Imath.PixelType(Imath.PixelType.FLOAT)
+half_pixel = Imath.PixelType(Imath.PixelType.HALF)
+pixel_type = float_pixel if CHANNELS['type'] == 'FLOAT' else half_pixel
+np_type = np.float32 if CHANNELS['type'] == 'FLOAT' else np.float16
+
 
 class PostProcessor:
   def __init__(self, folder: str):
     self.folder = folder
     self.img_shape = None
     self.spectrum = None
-
+    
     all_files = os.listdir(folder)
     # The image should be named like _400_405_410_nm.png
     self.all_images = [x for x in all_files if x.startswith("_")]
-
+    
     if self.all_images[0].endswith('.png'):
-      self.file_type='png'
+      self.file_type = 'png'
     elif self.all_images[0].endswith('.exr'):
-      self.file_type='exr'
-
+      self.file_type = 'exr'
+    
     if len(self.all_images) != CONSTANT.SPEC_LENGTH // 3:
       raise AssertionError(f'Invalid spectrum folder: {folder}')
-
+  
   def png_data_loader(self):
     wave_length_map: Dict[int, np.ndarray] = {}
     for f in self.all_images:
@@ -52,89 +57,83 @@ class PostProcessor:
       spectrum = np.append(spectrum, wave_length_map[key], axis=2)
     # interpolate the spectrum from 60 values to 61 values
     spectrum = np.append(spectrum, wave_length_map[sorted_waves[-1]], axis=2)
-
+    
     self.spectrum = spectrum
-
-  def exr_data_loader(self):
-    wave_length_map:Dict[int,np.ndarray] = {}
-    pixel_type=Imath.PixelType(Imath.PixelType.HALF)
+  
+  def exr_data_loader(self, channels):
+    wave_length_map: Dict[int, np.ndarray] = {}
+    
     for f in self.all_images:
       waves = [int(x) for x in f.split("_")[1:4]]
-      tmp_img=OpenEXR.InputFile(os.path.join(self.folder,f))
+      tmp_img = OpenEXR.InputFile(os.path.join(self.folder, f))
       if self.img_shape is None:
         dw = tmp_img.header()['dataWindow']
-        self.img_shape=(dw.max.y - dw.min.y + 1,dw.max.x - dw.min.x + 1 )
-      for i,w in enumerate(waves):
+        self.img_shape = (dw.max.y - dw.min.y + 1, dw.max.x - dw.min.x + 1)
+      for i, w in enumerate(waves):
         print(f"working on {w}")
-        buffed=tmp_img.channel(CHANNELS[i],pixel_type)
-        channel_data=np.frombuffer(buffed,dtype=np.float16).astype(np.float32)
-        channel_data.shape=self.img_shape
-        wave_length_map[w]=channel_data.reshape((*self.img_shape,1))
-    sorted_waves=sorted(wave_length_map.keys())
-    spectrum=wave_length_map[sorted_waves[0]]
+        buffed = tmp_img.channel(channels[i], pixel_type)
+        channel_data = np.frombuffer(buffed, dtype=np_type)
+        channel_data.shape = self.img_shape
+        wave_length_map[w] = channel_data.reshape((*self.img_shape, 1))
+    sorted_waves = sorted(wave_length_map.keys())
+    spectrum = wave_length_map[sorted_waves[0]]
     for key in sorted_waves[1:]:
-      spectrum=np.append(spectrum, wave_length_map[key], axis=2)
-    spectrum=np.append(spectrum, wave_length_map[sorted_waves[-1]], axis=2)
-    self.spectrum=spectrum
-
-
-
+      spectrum = np.append(spectrum, wave_length_map[key], axis=2)
+    spectrum = np.append(spectrum, wave_length_map[sorted_waves[-1]], axis=2)
+    return spectrum
+  
   def compose(self):
-    if self.file_type=='exr':
-      self.exr_data_loader()
-      self.output_as_exr()
-    elif self.file_type=='png':
+    if self.file_type == 'exr':
+      spectrum = self.exr_data_loader(CHANNELS["layers"])
+      self.output_as_exr(spectrum, postfix=CHANNELS["name"])
+    elif self.file_type == 'png':
       self.png_data_loader()
       self.output_as_srgb()
-
+  
   @staticmethod
   def _undo_gamma_correction(spectrum: np.ndarray):
     return utils.np_gamma_correct_rev(spectrum)
-
-  def output_as_exr(self, output:str=None, verbose=False):
-    if self.spectrum is None:
-      raise ValueError("spectrum is none")
+  
+  def output_as_exr(self, spectrum, output: str = None, postfix: str = ''):
     rgb_image = np.zeros((self.img_shape[0], self.img_shape[1], 3), dtype=np.double)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
-        xyz = Spectrum.spec_to_xyz(self.spectrum[i, j, :])
+        xyz = Spectrum.spec_to_xyz(spectrum[i, j, :])
         rgb_image[i, j, :] = xyz.to_srgb().np_rgb
-
+    
     if output is None:
       dir_path, base_name = os.path.split(self.folder)
-      output = '{}/{}.exr'.format(dir_path, base_name)
-
-    HEADER=OpenEXR.Header(self.img_shape[1],self.img_shape[0])
-    half_chan=Imath.Channel(Imath.PixelType(Imath.PixelType.HALF))
-    HEADER['channels']=dict([(c, half_chan) for c in 'RGB'])
-    exr=OpenEXR.OutputFile(output,HEADER)
-    exr.writePixels({'R':rgb_image[:,:,0].astype(np.float16).tostring(),
-                    'G':rgb_image[:,:,1].astype(np.float16).tostring(),
-                    'B':rgb_image[:,:,2].astype(np.float16).tostring()})
+      output = f'{dir_path}/{base_name}_{postfix}.exr'
+    
+    header = OpenEXR.Header(self.img_shape[1], self.img_shape[0])
+    half_chan = Imath.Channel(pixel_type)
+    header['channels'] = dict([(c, half_chan) for c in 'RGB'])
+    exr = OpenEXR.OutputFile(output, header)
+    exr.writePixels({'R': rgb_image[:, :, 0].astype(np_type).tostring(),
+                     'G': rgb_image[:, :, 1].astype(np_type).tostring(),
+                     'B': rgb_image[:, :, 2].astype(np_type).tostring()})
     exr.close()
-
-
-
+  
   def output_as_srgb(self, output: str = None, verbose=False):
     if self.spectrum is None:
       raise ValueError("Spectrum is none")
     xyz_image = np.zeros((self.img_shape[0], self.img_shape[1], 3), dtype=np.double)
-    # self.spectrum = utils.np_gamma_correct_rev(self.spectrum)
-
+    self.spectrum = utils.np_gamma_correct_rev(self.spectrum)
+    
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         xyz = Spectrum.spec_to_xyz(self.spectrum[i, j, :])
         xyz_image[i, j, :] = xyz.np_xyz
     max_xyz = np.amax(xyz_image)
     xyz_image /= max_xyz
-
+    
     rgb_image = np.zeros((self.img_shape[0], self.img_shape[1], 3), dtype=np.uint8)
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         rgb = XYZ(*xyz_image[i, j, :]).to_srgb()
         rgb_image[i, j, :] = rgb.to_uint8(verbose)
     img = Image.fromarray(rgb_image, "RGB")
-
+    
     if output is None:
       dir_path, base_name = os.path.split(self.folder)
       output = '{}/{}.png'.format(dir_path, base_name)
@@ -147,6 +146,7 @@ def parallel_output(f):
     processor.compose()
   except AssertionError as e:
     logger.error(e)
+
 
 def arg_parse():
   logging.basicConfig(filename="PostProcess.log", level=logging.WARNING)
@@ -163,13 +163,13 @@ def arg_parse():
     sorted_dir = sorted(os.listdir(input_path))
     dirs = [os.path.join(input_path, x) for x in sorted_dir if
             os.path.isdir(os.path.join(input_path, x))]
-    # Parallel(n_jobs=8)(delayed(parallel_output)(x) for x in dirs)
-    for x in dirs:
-      parallel_output(x)
+    Parallel(n_jobs=8)(delayed(parallel_output)(x) for x in dirs)
+    # for x in dirs:
+    #   parallel_output(x)
   else:
     processor = PostProcessor(input_path)
     processor.compose()
-    processor.output_as_srgb(verbose=args['verbose'])
+    # processor.output_as_srgb(verbose=args['verbose'])
 
 
 if __name__ == "__main__":

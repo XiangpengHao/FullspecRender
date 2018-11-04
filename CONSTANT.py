@@ -33,3 +33,31 @@ COLOR_MATCH: Dict[str, Spectrum] = {
 R_xy = np.asarray((0.6400, 0.3300))
 G_xy = np.asarray((0.3000, 0.6000))
 B_xy = np.asarray((0.1500, 0.0600))
+
+EXR_LAYER = {
+  "combined": {
+    "type": "HALF",
+    "layers": ["Composite.Combined.R", "Composite.Combined.G", "Composite.Combined.B"],
+    "name": "combined"
+  },
+  "diffuse": {
+    "type": "HALF",
+    "layers": ["RenderLayer.DiffCol.R", "RenderLayer.DiffCol.G", "RenderLayer.DiffCol.B"],
+    "name": "diffuse"
+  },
+  "depth": {
+    "type": "FLOAT",
+    "layers": ["RenderLayer.Depth.Z"],
+    "depth": "depth"
+  },
+  "normal": {
+    "type": "FLOAT",
+    "layers": ["RenderLayer.Normal.X", "RenderLayer.Normal.Y", "RenderLayer.Normal.Z"],
+    "name": "normal"
+  },
+  "glossy": {
+    "type": "FLOAT",
+    "layers": ["RenderLayer.GlossDir.R", "RenderLayer.GlossDir.G", "RenderLayer.GlossDir.B"],
+    "name": "glossy"
+  }
+}
