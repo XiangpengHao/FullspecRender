@@ -35,9 +35,19 @@ G_xy = np.asarray((0.3000, 0.6000))
 B_xy = np.asarray((0.1500, 0.0600))
 
 EXR_LAYER = {
+  "rgb": {
+    "type": "HALF",
+    "layers": ["R", "G", "B"],
+    "name": "rgb"
+  },
   "combined": {
     "type": "HALF",
     "layers": ["Composite.Combined.R", "Composite.Combined.G", "Composite.Combined.B"],
+    "name": "combined"
+  },
+  "render_combined": {
+    "type": "HALF",
+    "layers": ["RenderLayer.Combined.R", "RenderLayer.Combined.G", "RenderLayer.Combined.B"],
     "name": "combined"
   },
   "diffuse": {

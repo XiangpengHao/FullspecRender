@@ -14,7 +14,7 @@ from joblib import Parallel, delayed
 
 logger = logging.getLogger(__name__)
 
-CHANNELS = CONSTANT.EXR_LAYER["glossy"]
+CHANNELS = CONSTANT.EXR_LAYER["rgb"]
 float_pixel = Imath.PixelType(Imath.PixelType.FLOAT)
 half_pixel = Imath.PixelType(Imath.PixelType.HALF)
 pixel_type = float_pixel if CHANNELS['type'] == 'FLOAT' else half_pixel
@@ -85,6 +85,7 @@ class PostProcessor:
   def compose(self):
     if self.file_type == 'exr':
       spectrum = self.exr_data_loader(CHANNELS["layers"])
+      print("\n".join([str(x) for x in spectrum[360, 295, :]]))
       self.output_as_exr(spectrum, postfix=CHANNELS["name"])
     elif self.file_type == 'png':
       self.png_data_loader()
