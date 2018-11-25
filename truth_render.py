@@ -22,7 +22,7 @@ def context_setup():
   bpy.context.scene.render.image_settings.color_depth = '16'
   bpy.context.scene.render.image_settings.exr_codec = 'PIZ'
   for layer in LAYERS:
-    setattr(bpy.data.scene[SCENE_NAME].view_layers['RenderLayer'], layer, True)
+    setattr(bpy.data.scenes[SCENE_NAME].view_layers['RenderLayer'], layer, True)
   
 def render(scene_name, output_path, resolution, viewpoint):
   scene = bpy.data.scenes[scene_name]
