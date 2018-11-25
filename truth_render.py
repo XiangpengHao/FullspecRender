@@ -3,8 +3,8 @@ import os
 import shutil
 import json
 
-DEPTH_OUTPUT_FILENAME = 'Image0001.exr'
-
+SCENE_NAME = "Scene"
+LAYERS=['use_pass_z', 'use_pass_normal']
 
 def set_locations(data):
   for obj in data:
@@ -17,32 +17,21 @@ def set_locations(data):
     bpy_obj.rotation_euler.z = obj['rotation'][2]
 
 def context_setup():
-  bpy.context.scene.use_nodes = True
   bpy.context.scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+  bpy.context.scene.render.image_settings.color_mode = 'RGB'
+  bpy.context.scene.render.image_settings.color_depth = '16'
+  bpy.context.scene.render.image_settings.exr_codec = 'PIZ'
+  for layer in LAYERS:
+    setattr(bpy.data.scene[SCENE_NAME].view_layers['RenderLayer'], layer, True)
   
-
 def render(scene_name, output_path, resolution, viewpoint):
   scene = bpy.data.scenes[scene_name]
-  tree = scene.node_tree
-  links = tree.links
-  for n in tree.nodes:
-    tree.nodes.remove(n)
-  
-  rl = tree.nodes.new('CompositorNodeRLayers')
-  
-  compositor=tree.nodes.new('CompositorNodeComposite')
-  links.new(rl.outputs[0], compositor.inputs[0])
 
-  normalize = tree.nodes.new('CompositorNodeNormalize')
-  links.new(rl.outputs[2], normalize.inputs[0])
+  scene.render.engine='CYCLES'
   
-  invert = tree.nodes.new('CompositorNodeInvert')
-  links.new(normalize.outputs[0], invert.inputs[1])
-  
-  file_output = tree.nodes.new('CompositorNodeOutputFile')
-  file_output.base_path = '/tmp/'
-  links.new(invert.outputs[0], file_output.inputs[0])
-  
+  scene.cycles.device='CPU'
+  scene.render.tile_x=32
+  scene.render.tile_y=32
   scene.cycles.samples = 1
   scene.render.resolution_x = resolution[0]
   scene.render.resolution_y = resolution[1]
@@ -55,11 +44,9 @@ def render(scene_name, output_path, resolution, viewpoint):
   camera.rotation_euler.y = viewpoint['rotation'][1]
   camera.rotation_euler.z = viewpoint['rotation'][2]
   
-  bpy.ops.render.render()
-  shutil.move(f'/tmp/{DEPTH_OUTPUT_FILENAME}', output_path)
+  scene.render.filepath=output_path
+  bpy.ops.render.render(write_still=True)
 
-
-# os.remove('/home/hao/Documents/a.png')
 
 
 def main():
@@ -82,7 +69,7 @@ def main():
     if k < start_from:
       continue
     render(scene_name=config['scene'],
-           output_path=os.path.join(output_dir, f'vp_{k}.png'),
+           output_path=os.path.join(output_dir, f'vp_{k}.exr'),
            resolution=resolution,
            viewpoint=vp)
 
