@@ -25,11 +25,9 @@ class GroundTruth:
     def __init__(self, input_path: str):
         self.input_path = input_path
         dir_path, base_name = os.path.split(input_path)
-        self.output_path = '{dir}/{base}_{postfix}.exr'.format(
-            dir=dir_path, base=base_name)
-
-        self.output_path = output_path
-        self.all_files = [x for x in os.listdir(input_path) if 'exr' in x]
+        self.output_path =f'{dir_path}/{base_name}'+ '{vp}_{postfix}.exr'
+        print(self.output_path)
+        self.all_files = [x for x in os.listdir(input_path) if len(x.split('_'))==2]
         self.img_shape = None
 
     def compose(self):
@@ -39,10 +37,10 @@ class GroundTruth:
                 dw = tmp_img.header()['dataWindow']
                 self.img_shape = (dw.max.y - dw.min.y + 1,
                                   dw.max.x - dw.min.x + 1)
-            self._compose_one(tmp_img)
+            self._compose_one(tmp_img, f)
 
-    def _compose_one(self, exr_img, file_path: str)-> np.ndarray:
-        for output in LAYER_MAPPING.items():
+    def _compose_one(self, exr_img, filename:str)-> np.ndarray:
+        for output in LAYER_MAPPING:
             data = {}
             for index, channel in enumerate(output['layers']):
                 buffed = exr_img.channel(channel, float_pixel)
@@ -50,10 +48,10 @@ class GroundTruth:
 
             header = OpenEXR.Header(self.img_shape[1], self.img_shape[0])
             float_chan = Imath.Channel(float_pixel)
-            header['channels'] = dic([(c, float_chan)
+            header['channels'] = dict([(c, float_chan)
                                       for c in output['outputs']])
             exr = OpenEXR.OutputFile(
-                output_path.format(postfix=output['name']), header)
+                self.output_path.format(vp=filename.split('.')[0],postfix=output['name']), header)
             exr.writePixels(data)
             exr.close()
 
@@ -72,3 +70,8 @@ def arg_parse():
 
     processor = GroundTruth(input_path)
     processor.compose()
+
+
+
+if __name__=="__main__":
+    arg_parse()
