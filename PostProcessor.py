@@ -100,7 +100,7 @@ class PostProcessor:
     for i in range(self.img_shape[0]):
       for j in range(self.img_shape[1]):
         xyz = Spectrum.spec_to_xyz(spectrum[i, j, :])
-        rgb_image[i, j, :] = xyz.to_srgb().np_rgb
+        rgb_image[i, j, :] = xyz.to_linear_rgb().np_rgb
     
     if output is None:
       dir_path, base_name = os.path.split(self.folder)

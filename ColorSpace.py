@@ -77,6 +77,14 @@ class XYZ:
                utils.gamma_correct(rgb[1]),
                utils.gamma_correct(rgb[2]))
   
+  def to_linear_rgb(self, norm:bool=False)->RGB:
+    if norm:
+      xyz=self.norm().np_xyz
+    else:
+      xyz=self.np_xyz
+    rbg=np.matmul(utils.XYZ2RGB,xyz)
+    return RGB(rbg[0], rbg[1], rbg[2])
+  
   @functools.lru_cache(maxsize=500)
   def in_srgb(self) -> bool:
     from CONSTANT import R_xy, G_xy, B_xy
