@@ -1,11 +1,4 @@
-import o
-    -s, --signoff         add Signed-off-by:
-    -t, --template <file>
-                          use specified template file
-    -e, --edit            force edit of commit
-    --cleanup <default>   how to strip spaces and #comments from message
-    --status              include status in commit message template
-s
+import os
 import OpenEXR
 import Imath
 import logging

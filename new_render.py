@@ -60,10 +60,13 @@ class TextureNode:
 
 
 class FullSpecRender:
-  def __init__(self, objects: List[Union[BlenderNode, TextureNode]], scene='Scene'):
+  def __init__(self, objects: List[Union[BlenderNode, TextureNode]], 
+                scene='Scene', resolution=(640, 480)):
     self.normal_objects = [o for o in objects if isinstance(o, BlenderNode)]
     self.texture_objects = [o for o in objects if isinstance(o, TextureNode)]
     self.bpy_scene = bpy.data.scenes[scene]
+    self.resolution = resolution
+    self.render_context_setup()
   
   # index_i is sth like 400, 405, 410
   def _set_color(self, index_i: int):
@@ -73,17 +76,22 @@ class FullSpecRender:
       obj.set_color(index_i)
   
   def render(self, index: int, output_prefix: str,
-             resolution=(640, 480), viewport=None):
+             viewport=None):
     self._set_color(index)
     output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.exr'
-    
-    self.bpy_scene.render.resolution_x = resolution[0]
-    self.bpy_scene.render.resolution_y = resolution[1]
-    self.bpy_scene.render.resolution_percentage = 100
     self.bpy_scene.render.filepath = path.join(ROOT_PATH, output_path)
-    self.bpy_scene.render.engine = 'CYCLES'
-    self.bpy_scene.cycles.samples = int(os.environ.get('RENDER_SAMPLES', 500))
-    
+
+    if viewport is not None:
+      camera = self.bpy_scene.camera
+      camera.location.x = viewport['location'][0]
+      camera.location.y = viewport['location'][1]
+      camera.location.z = viewport['location'][2]
+      camera.rotation_euler.x = viewport['rotation'][0]
+      camera.rotation_euler.y = viewport['rotation'][1]
+      camera.rotation_euler.z = viewport['rotation'][2]
+    bpy.ops.render.render(write_still=True)
+
+  def render_context_setup(self):
     device = os.environ.get('RENDER_DEVICE')
     if device == "GPU":
       self.bpy_scene.cycles.device = 'GPU'
@@ -98,16 +106,13 @@ class FullSpecRender:
       self.bpy_scene.cycles.device = 'CPU'
       self.bpy_scene.render.tile_x = 32
       self.bpy_scene.render.tile_y = 32
-    if viewport is not None:
-      camera = self.bpy_scene.camera
-      camera.location.x = viewport['location'][0]
-      camera.location.y = viewport['location'][1]
-      camera.location.z = viewport['location'][2]
-      camera.rotation_euler.x = viewport['rotation'][0]
-      camera.rotation_euler.y = viewport['rotation'][1]
-      camera.rotation_euler.z = viewport['rotation'][2]
-    bpy.ops.render.render(write_still=True)
 
+    self.bpy_scene.render.resolution_x =self.resolution[0]
+    self.bpy_scene.render.resolution_y =self.resolution[1]
+    self.bpy_scene.render.resolution_percentage = 100
+    self.bpy_scene.render.engine = 'CYCLES'
+    self.bpy_scene.cycles.samples = int(os.environ.get('RENDER_SAMPLES', 500))
+ 
 
 def set_locations(data):
   for obj in data:
@@ -164,7 +169,9 @@ def main():
   if "locations" in config:
     set_locations(config["locations"])
   
-  renderer = FullSpecRender(normal_objects + texture_objects, scene=config['scene'])
+  renderer = FullSpecRender(normal_objects + texture_objects,
+              scene=config['scene'],
+              resolution=resolution)
   
   if isinstance(config['viewports'], str):
     viewports = json.load(open(os.path.join(working_dir, config['viewports'])))
@@ -181,7 +188,7 @@ def main():
     os.makedirs(os.path.dirname(output_path))
     for i in range(400, 700, 15):
       print(f'now rendering {i}_{i+5}_{i+10}')
-      renderer.render(i, output_dir, resolution=resolution, viewport=vp)
+      renderer.render(i, output_dir, viewport=vp)
   else:
     for k, vp in enumerate(viewports):
       if k < start_from:
@@ -190,7 +197,7 @@ def main():
       os.makedirs(os.path.dirname(output_path))
       for i in range(400, 700, 15):
         print(f'now rendering {i}_{i+5}_{i+10}')
-        renderer.render(i, output_dir, resolution=resolution, viewport=vp)
+        renderer.render(i, output_dir, viewport=vp)
 
 
 if __name__ == '__main__':
