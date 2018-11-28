@@ -61,12 +61,14 @@ class TextureNode:
 
 class FullSpecRender:
   def __init__(self, objects: List[Union[BlenderNode, TextureNode]], 
-                scene='Scene', resolution=(640, 480)):
+                scene='Scene', resolution=(640, 480), render_layers=[]):
     self.normal_objects = [o for o in objects if isinstance(o, BlenderNode)]
     self.texture_objects = [o for o in objects if isinstance(o, TextureNode)]
     self.bpy_scene = bpy.data.scenes[scene]
     self.resolution = resolution
+    self.render_layers=render_layers
     self.render_context_setup()
+    
   
   # index_i is sth like 400, 405, 410
   def _set_color(self, index_i: int):
@@ -112,6 +114,14 @@ class FullSpecRender:
     self.bpy_scene.render.resolution_percentage = 100
     self.bpy_scene.render.engine = 'CYCLES'
     self.bpy_scene.cycles.samples = int(os.environ.get('RENDER_SAMPLES', 500))
+
+    bpy.context.scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+    bpy.context.scene.render.image_settings.color_mode = 'RGB'
+    bpy.context.scene.render.image_settings.color_depth = '16'
+    bpy.context.scene.render.image_settings.exr_codec = 'PIZ'
+    for layer in self.render_layers:
+      setattr(self.bpy_scene.view_layers['RenderLayer'], layer, True)
+
  
 
 def set_locations(data):
@@ -123,14 +133,6 @@ def set_locations(data):
     bpy_obj.rotation_euler.x = obj['rotation'][0]
     bpy_obj.rotation_euler.y = obj['rotation'][1]
     bpy_obj.rotation_euler.z = obj['rotation'][2]
-
-
-def set_render_layers(layers):
-  if not layers:
-    return
-  render_layer = bpy.context.scene.view_layers['RenderLayer']
-  for layer in layers:
-    setattr(render_layer, layer, True)
 
 
 def main():
@@ -171,6 +173,7 @@ def main():
   
   renderer = FullSpecRender(normal_objects + texture_objects,
               scene=config['scene'],
+              render_layers=config.get('renderLayers', []),
               resolution=resolution)
   
   if isinstance(config['viewports'], str):
@@ -179,8 +182,6 @@ def main():
     viewports = config['viewports']
   
   task_id = os.environ.get('SLURM_ARRAY_TASK_ID', None)
-  set_render_layers(config.get('renderLayers', None))
-  
   if task_id:
     k = int(task_id)
     vp = viewports[k]
