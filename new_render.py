@@ -129,8 +129,9 @@ def set_render_layers(layers):
 
 
 def main():
-  working_dir = os.environ["MODEL"]
-  config_file = os.environ["CONFIG_FILE"]
+  config_file = os.environ["MODEL"]
+  output_dir = os.environ['OUTPUT_DIR']
+  working_dir = os.path.split(config_file)[0]
   config = json.load(open(path.join(working_dir, config_file)))
   intermediate_dir = path.join(working_dir, config['intermediatePath'])
   start_from = config['startFrom']
@@ -176,8 +177,8 @@ def main():
   if task_id:
     k = int(task_id)
     vp = viewports[k]
-    output_dir = f"{working_dir}/rendered/{config['name']}/vp_{k}/"
-    os.makedirs(os.path.dirname(output_dir))
+    output_path = f"{working_dir}/rendered/{output_dir}/vp_{k}/"
+    os.makedirs(os.path.dirname(output_path))
     for i in range(400, 700, 15):
       print(f'now rendering {i}_{i+5}_{i+10}')
       renderer.render(i, output_dir, resolution=resolution, viewport=vp)
@@ -185,8 +186,8 @@ def main():
     for k, vp in enumerate(viewports):
       if k < start_from:
         continue
-      output_dir = f"{working_dir}/rendered/{config['name']}/vp_{k}/"
-      os.makedirs(os.path.dirname(output_dir))
+      output_path = f"{working_dir}/rendered/{output_dir}/vp_{k}/"
+      os.makedirs(os.path.dirname(output_path))
       for i in range(400, 700, 15):
         print(f'now rendering {i}_{i+5}_{i+10}')
         renderer.render(i, output_dir, resolution=resolution, viewport=vp)
