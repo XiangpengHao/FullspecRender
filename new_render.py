@@ -81,7 +81,7 @@ class FullSpecRender:
              viewport=None):
     self._set_color(index)
     output_path = f'{output_prefix}_{index}_{index+5}_{index+10}_nm.exr'
-    self.bpy_scene.render.filepath = path.join(ROOT_PATH, output_path)
+    self.bpy_scene.render.filepath =  output_path
 
     if viewport is not None:
       camera = self.bpy_scene.camera
@@ -189,7 +189,7 @@ def main():
     os.makedirs(os.path.dirname(output_path))
     for i in range(400, 700, 15):
       print(f'now rendering {i}_{i+5}_{i+10}')
-      renderer.render(i, output_dir, viewport=vp)
+      renderer.render(i, output_path, viewport=vp)
   else:
     for k, vp in enumerate(viewports):
       if k < start_from:
@@ -198,7 +198,7 @@ def main():
       os.makedirs(os.path.dirname(output_path))
       for i in range(400, 700, 15):
         print(f'now rendering {i}_{i+5}_{i+10}')
-        renderer.render(i, output_dir, viewport=vp)
+        renderer.render(i, output_path, viewport=vp)
 
 
 if __name__ == '__main__':
