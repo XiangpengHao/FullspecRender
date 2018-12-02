@@ -76,14 +76,24 @@ def arg_parse():
         description='Compose a set of groundtruth images')
     parser.add_argument("-i", "--input", required=True)
     parser.add_argument("-o", "--output", required=False)
+    parser.add_argument("-d", "--dir", action="store_true")
 
     args = vars(parser.parse_args())
     input_path = args['input']
     if not os.path.isdir(input_path):
         raise ValueError('Input should be a directory')
 
-    processor = Extractor(input_path)
-    processor.compose_all(LAYER_MAPPING)
+    if args['dir']:
+        sorted_dir = sorted(os.listdir(input_path))
+        dirs = [os.path.join(input_path, x) for x in sorted_dir if
+                os.path.isdir(os.path.join(input_path, x))]
+        for d in dirs:
+            print("working on ", d)
+            processor = Extractor(d)
+            processor.compose_all(LAYER_MAPPING)
+    else:
+        processor = Extractor(input_path)
+        processor.compose_all(LAYER_MAPPING)
 
 
 if __name__ == '__main__':
