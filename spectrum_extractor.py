@@ -1,9 +1,11 @@
 import os
+import subprocess
 import numpy as np
 import logging
 import argparse
 import Imath
 import OpenEXR
+from joblib import Parallel, delayed
 
 LAYER_MAPPING = [
     {
@@ -70,6 +72,24 @@ class Extractor:
         exr.close()
 
 
+def clean_up(base_path):
+    os.mkdir(os.path.join(base_path, 'combined'))
+    os.mkdir(os.path.join(base_path, 'diffuse'))
+    os.mkdir(os.path.join(base_path, 'glossy'))
+    subprocess.run(
+        [f'mv {base_path}/vp*_combined.exr {base_path}/combined'], shell=True)
+    subprocess.run(
+        [f'mv {base_path}/vp*diffuse*.exr {base_path}/diffuse'], shell=True)
+    subprocess.run(
+        [f'mv {base_path}/vp*glossy*.exr {base_path}/glossy'], shell=True)
+
+
+def parallel_job(d):
+    print("working on ", d)
+    processor = Extractor(d)
+    processor.compose_all(LAYER_MAPPING)
+
+
 def arg_parse():
     logging.basicConfig(level=logging.WARNING)
     parser = argparse.ArgumentParser(
@@ -87,10 +107,8 @@ def arg_parse():
         sorted_dir = sorted(os.listdir(input_path))
         dirs = [os.path.join(input_path, x) for x in sorted_dir if
                 os.path.isdir(os.path.join(input_path, x))]
-        for d in dirs:
-            print("working on ", d)
-            processor = Extractor(d)
-            processor.compose_all(LAYER_MAPPING)
+        Parallel(n_jobs=10)(delayed(parallel_job)(d) for d in dirs)
+        clean_up(input_path)
     else:
         processor = Extractor(input_path)
         processor.compose_all(LAYER_MAPPING)
